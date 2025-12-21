@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL}  # Railway provee esta variable
+
+  jpa:
+    hibernate:
+      ddl-auto: validate  # NO crear/modificar tablas en producción
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  security:
+    jwt:
+      secret: ${JWT_SECRET}  # Variable de entorno obligatoria
+
+logging:
+  level:
+    com.frutas.trazabilidad: INFO
+    org.springframework.security: WARN
+    org.hibernate: WARN

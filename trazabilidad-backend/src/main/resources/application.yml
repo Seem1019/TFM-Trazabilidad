@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: trazabilidad-backend
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/trazabilidad_db
+    username: tfm_user
+    password: tfm_password
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update  # Crea/actualiza tablas automáticamente en desarrollo
+    show-sql: true      # Muestra SQL en consola (útil para debug)
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: UTC
+
+  # Configuración de seguridad
+  security:
+    jwt:
+      secret: ${JWT_SECRET:mi-super-secreto-jwt-que-debe-tener-al-menos-256-bits-para-ser-seguro}
+      expiration: 86400000  # 24 horas en milisegundos
+
+server:
+  port: 8080
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# Swagger/OpenAPI
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+
+# Logging
+logging:
+  level:
+    com.frutas.trazabilidad: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
