@@ -17,14 +17,12 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * Filtro que registra automáticamente información de cada request y response.
- *
  * Logs incluyen:
  * - Método HTTP y URI
  * - Tiempo de procesamiento
  * - Status code de respuesta
  * - IP del cliente
  * - User agent
- *
  * Nota: No loguea el body completo para evitar logs excesivamente grandes,
  * pero se puede activar en desarrollo si es necesario.
  */
