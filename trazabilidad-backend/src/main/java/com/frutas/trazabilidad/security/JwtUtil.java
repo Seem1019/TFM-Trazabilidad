@@ -78,4 +78,28 @@ public class JwtUtil {
             return true;
         }
     }
+
+    /**
+     * Extrae el empresaId del token.
+     */
+    public Long extractEmpresaId(String token) {
+        try {
+            DecodedJWT jwt = JWT.decode(token);
+            return jwt.getClaim("empresaId").asLong();
+        } catch (Exception e) {
+            throw new RuntimeException("No se pudo extraer empresaId del token", e);
+        }
+    }
+
+    /**
+     * Extrae el userId del token.
+     */
+    public Long extractUserId(String token) {
+        try {
+            DecodedJWT jwt = JWT.decode(token);
+            return jwt.getClaim("userId").asLong();
+        } catch (Exception e) {
+            throw new RuntimeException("No se pudo extraer userId del token", e);
+        }
+    }
 }
