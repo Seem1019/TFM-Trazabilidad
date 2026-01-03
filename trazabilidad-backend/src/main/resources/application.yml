@@ -32,6 +32,18 @@ spring:
       include-message: always
       include-binding-errors: always
 
+# Configuración de la aplicación
+app:
+  # URL base del backend (para generación de URLs internas)
+  backend-url: ${BACKEND_URL:http://localhost:8080}
+
+  # URL base del frontend (para QR y enlaces públicos)
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+
+  # URL pública para consulta de trazabilidad por QR
+  # Apunta al frontend que consume el endpoint público del backend
+  qr-base-url: ${QR_BASE_URL:${app.frontend-url}/public/traza}
+
 server:
   port: 8080
 

@@ -67,4 +67,11 @@ public interface LoteRepository extends JpaRepository<Lote, Long> {
             "AND l.tipoFruta = :tipoFruta AND l.activo = true")
     List<Lote> findByEmpresaIdAndTipoFruta(@Param("empresaId") Long empresaId,
                                            @Param("tipoFruta") String tipoFruta);
+
+    /**
+     * Verifica si existe un lote con el ID dado que pertenece a la empresa.
+     */
+    @Query("SELECT CASE WHEN COUNT(l) > 0 THEN true ELSE false END " +
+            "FROM Lote l WHERE l.id = :loteId AND l.finca.empresa.id = :empresaId")
+    boolean existsByIdAndEmpresaId(@Param("loteId") Long loteId, @Param("empresaId") Long empresaId);
 }

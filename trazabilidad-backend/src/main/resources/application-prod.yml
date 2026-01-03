@@ -4,7 +4,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate  # NO crear/modificar tablas en producción
+      ddl-auto: update  # Para este TFM académico, permitimos update en prod
     show-sql: false
     properties:
       hibernate:
@@ -13,6 +13,17 @@ spring:
   security:
     jwt:
       secret: ${JWT_SECRET}  # Variable de entorno obligatoria
+
+# URLs de producción
+app:
+  # Backend en Railway
+  backend-url: ${BACKEND_URL:https://tfm-backend.railway.app}
+
+  # Frontend en Vercel
+  frontend-url: ${FRONTEND_URL:https://tfm-trazabilidad.vercel.app}
+
+  # URL para códigos QR (apunta al frontend)
+  qr-base-url: ${QR_BASE_URL:https://tfm-trazabilidad.vercel.app/public/traza}
 
 logging:
   level:
