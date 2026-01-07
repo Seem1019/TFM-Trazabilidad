@@ -1,10 +1,12 @@
 package com.frutas.trazabilidad.module.empaque.controller;
 
+import com.frutas.trazabilidad.dto.TrazabilidadPublicaDTO;
 import com.frutas.trazabilidad.entity.User;
 import com.frutas.trazabilidad.module.empaque.dto.EtiquetaRequest;
 import com.frutas.trazabilidad.module.empaque.dto.EtiquetaResponse;
 import com.frutas.trazabilidad.module.empaque.service.EtiquetaService;
 import com.frutas.trazabilidad.dto.ApiResponse;
+import com.frutas.trazabilidad.service.TrazabilidadService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +24,7 @@ import java.util.List;
 public class EtiquetaController {
 
     private final EtiquetaService etiquetaService;
+    private final TrazabilidadService trazabilidadService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<EtiquetaResponse>>> listar(
@@ -96,11 +99,15 @@ public class EtiquetaController {
         return ResponseEntity.ok(ApiResponse.success(null, "Etiqueta eliminada exitosamente"));
     }
 
-    // Endpoint público para consulta de trazabilidad por QR
+    /**
+     * Endpoint público para consulta de trazabilidad completa por QR.
+     * Accesible sin autenticación para consumidores finales.
+     * Retorna información completa del recorrido del producto sin datos sensibles.
+     */
     @GetMapping("/public/qr/{codigoQr}")
-    public ResponseEntity<ApiResponse<EtiquetaResponse>> consultarPorQr(
+    public ResponseEntity<ApiResponse<TrazabilidadPublicaDTO>> consultarPorQr(
             @PathVariable String codigoQr) {
-        EtiquetaResponse etiqueta = etiquetaService.buscarPorCodigoQr(codigoQr);
-        return ResponseEntity.ok(ApiResponse.success(etiqueta, "Trazabilidad obtenida"));
+        TrazabilidadPublicaDTO trazabilidad = trazabilidadService.obtenerTrazabilidadPublica(codigoQr);
+        return ResponseEntity.ok(ApiResponse.success(trazabilidad, "Trazabilidad completa obtenida exitosamente"));
     }
 }
