@@ -1,7 +1,5 @@
 # Multi-stage build para optimizar el tamaño de la imagen
-FROM eclipse-temurin:21-jdk-alpine AS build
-
-# Nota: Render no soporta Java 25 aún, usaremos Java 21 LTS
+FROM eclipse-temurin:25-jdk-alpine AS build
 WORKDIR /app
 
 # Copiar archivos de Maven
@@ -12,17 +10,14 @@ COPY pom.xml .
 # Dar permisos de ejecución al wrapper de Maven
 RUN chmod +x mvnw
 
-# Descargar dependencias (capa cacheada)
-RUN ./mvnw dependency:go-offline -B
-
 # Copiar código fuente
 COPY src src
 
 # Compilar aplicación (sin tests para deployment rápido)
-RUN ./mvnw clean package -DskipTests
+RUN ./mvnw clean package -DskipTests -B
 
 # Etapa final: imagen ligera para ejecución
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 
 WORKDIR /app
 
