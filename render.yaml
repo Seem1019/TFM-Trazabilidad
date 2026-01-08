@@ -21,5 +21,9 @@ services:
         fromDatabase:
           name: trazabilidad-db
           property: connectionString
+      - key: JDBC_DATABASE_URL
+        fromDatabase:
+          name: trazabilidad-db
+          property: jdbcUrl
       - key: JWT_SECRET
         generateValue: true

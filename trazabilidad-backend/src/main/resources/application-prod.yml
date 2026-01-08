@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:${DATABASE_URL}  # Render provee esta variable automáticamente
+    url: ${JDBC_DATABASE_URL}  # Render provee esta variable en formato jdbc:postgresql://
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 5
