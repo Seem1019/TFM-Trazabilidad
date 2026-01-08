@@ -1,0 +1,30 @@
+services:
+  # Base de datos PostgreSQL
+  - type: pserv
+    name: trazabilidad-db
+    env: docker
+    plan: free
+    region: oregon
+    databases:
+      - name: trazabilidad
+        user: trazabilidad_user
+
+  # Backend Spring Boot
+  - type: web
+    name: trazabilidad-backend
+    env: docker
+    region: oregon
+    plan: free
+    dockerfilePath: ./trazabilidad-backend/Dockerfile
+    dockerContext: ./trazabilidad-backend
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DATABASE_URL
+        fromDatabase:
+          name: trazabilidad-db
+          property: connectionString
+      - key: JAVA_OPTS
+        value: "-Xmx512m -Xms256m"
+    healthCheckPath: /actuator/health
+    autoDeploy: true
