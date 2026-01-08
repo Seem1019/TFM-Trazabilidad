@@ -1,6 +1,11 @@
 spring:
   datasource:
-    url: ${DATABASE_URL}  # Railway provee esta variable
+    url: ${DATABASE_URL}  # Render provee esta variable automáticamente
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+      connection-timeout: 30000
 
   jpa:
     hibernate:
@@ -9,24 +14,49 @@ spring:
     properties:
       hibernate:
         format_sql: false
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: UTC
 
   security:
     jwt:
-      secret: ${JWT_SECRET}  # Variable de entorno obligatoria
+      secret: ${JWT_SECRET}  # Variable de entorno obligatoria en Render
+
+  web:
+    error:
+      include-message: never
+      include-binding-errors: never
+      include-stacktrace: never
 
 # URLs de producción
 app:
-  # Backend en Railway
-  backend-url: ${BACKEND_URL:https://tfm-backend.railway.app}
+  # Backend en Render
+  backend-url: ${BACKEND_URL:https://trazabilidad-backend.onrender.com}
 
   # Frontend en Vercel
-  frontend-url: ${FRONTEND_URL:https://tfm-trazabilidad.vercel.app}
+  frontend-url: ${FRONTEND_URL:https://trazabilidad-frontend.vercel.app}
 
   # URL para códigos QR (apunta al frontend)
-  qr-base-url: ${QR_BASE_URL:https://tfm-trazabilidad.vercel.app/public/traza}
+  qr-base-url: ${QR_BASE_URL:https://trazabilidad-frontend.vercel.app/public/traza}
+
+server:
+  port: ${PORT:8080}  # Render asigna el puerto dinámicamente via variable $PORT
+  shutdown: graceful
+
+# Actuator para health checks de Render
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
 
 logging:
   level:
+    root: INFO
     com.frutas.trazabilidad: INFO
     org.springframework.security: WARN
     org.hibernate: WARN

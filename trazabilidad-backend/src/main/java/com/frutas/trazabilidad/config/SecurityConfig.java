@@ -41,7 +41,10 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/api-docs/**",
                                 "/v3/api-docs/**",
-                                "/api/etiquetas/public/**"
+                                "/api/etiquetas/public/**",
+                                "/actuator/health",
+                                "/actuator/health/**",
+                                "/actuator/info"
                         ).permitAll()
 
                         // Todos los demás requieren autenticación
