@@ -17,13 +17,25 @@ services:
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
-      - key: DATABASE_URL
+      - key: DB_HOST
         fromDatabase:
           name: trazabilidad-db
-          property: connectionString
-      - key: JDBC_DATABASE_URL
+          property: host
+      - key: DB_PORT
         fromDatabase:
           name: trazabilidad-db
-          property: jdbcUrl
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: trazabilidad-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: trazabilidad-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: trazabilidad-db
+          property: password
       - key: JWT_SECRET
         generateValue: true
