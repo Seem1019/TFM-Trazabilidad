@@ -16,6 +16,7 @@ import java.util.Collections;
  */
 @Entity
 @Table(name = "usuarios")
+@EntityListeners(com.frutas.trazabilidad.listener.AuditEntityListener.class)
 @Getter
 @Setter
 @NoArgsConstructor

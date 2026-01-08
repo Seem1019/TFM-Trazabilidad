@@ -1,11 +1,14 @@
 package com.frutas.trazabilidad.service;
 
+import com.frutas.trazabilidad.dto.TrazabilidadCompletaDTO;
 import com.frutas.trazabilidad.dto.TrazabilidadPublicaDTO;
 import com.frutas.trazabilidad.exception.ResourceNotFoundException;
 import com.frutas.trazabilidad.module.empaque.entity.*;
 import com.frutas.trazabilidad.module.empaque.repository.ControlCalidadRepository;
 import com.frutas.trazabilidad.module.empaque.repository.EtiquetaRepository;
 import com.frutas.trazabilidad.module.empaque.repository.EtiquetaPalletRepository;
+import com.frutas.trazabilidad.module.logistica.entity.DocumentoExportacion;
+import com.frutas.trazabilidad.module.logistica.entity.Envio;
 import com.frutas.trazabilidad.module.logistica.entity.EventoLogistico;
 import com.frutas.trazabilidad.module.produccion.entity.*;
 import lombok.RequiredArgsConstructor;
@@ -170,5 +173,249 @@ public class TrazabilidadService {
                         .estado(cert.getEstado())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Obtiene la trazabilidad completa INTERNA con todos los datos (solo usuarios autenticados).
+     */
+    @Transactional(readOnly = true)
+    public TrazabilidadCompletaDTO obtenerTrazabilidadCompleta(Long etiquetaId, Long empresaId) {
+        log.info("Consultando trazabilidad completa interna para etiqueta ID: {}", etiquetaId);
+
+        // Buscar etiqueta y validar pertenencia a empresa
+        Etiqueta etiqueta = etiquetaRepository.findById(etiquetaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Etiqueta no encontrada con ID: " + etiquetaId));
+
+        // Validar que la etiqueta pertenece a la empresa del usuario
+        Long etiquetaEmpresaId = etiqueta.getClasificacion().getRecepcion().getLote().getFinca().getEmpresa().getId();
+        if (!etiquetaEmpresaId.equals(empresaId)) {
+            throw new IllegalArgumentException("No tiene permisos para consultar esta etiqueta");
+        }
+
+        // Obtener toda la cadena de trazabilidad
+        Clasificacion clasificacion = etiqueta.getClasificacion();
+        RecepcionPlanta recepcion = clasificacion.getRecepcion();
+        Lote lote = recepcion.getLote();
+        Finca finca = lote.getFinca();
+
+        // Construir DTO completo con todos los datos
+        return TrazabilidadCompletaDTO.builder()
+                .etiquetaId(etiqueta.getId())
+                .codigoEtiqueta(etiqueta.getCodigoEtiqueta())
+                .codigoQr(etiqueta.getCodigoQr())
+                .tipoEtiqueta(etiqueta.getTipoEtiqueta())
+                .estadoEtiqueta(etiqueta.getEstadoEtiqueta())
+                .urlQr(etiqueta.getUrlQr())
+                .origen(construirOrigenCompleto(finca, lote))
+                .produccion(construirProduccionCompleta(lote))
+                .empaque(construirEmpaqueCompleto(recepcion, clasificacion))
+                .logistica(construirLogisticaCompleta(etiqueta))
+                .certificaciones(construirCertificacionesCompletas(finca))
+                .auditoria(construirAuditoriaInfo(etiqueta, finca))
+                .build();
+    }
+
+    private TrazabilidadCompletaDTO.OrigenInfo construirOrigenCompleto(Finca finca, Lote lote) {
+        return TrazabilidadCompletaDTO.OrigenInfo.builder()
+                .fincaId(finca.getId())
+                .fincaNombre(finca.getNombre())
+                .fincaCodigo(finca.getCodigoFinca())
+                .municipio(finca.getMunicipio())
+                .departamento(finca.getDepartamento())
+                .pais(finca.getPais())
+                .areaTotal(finca.getAreaHectareas())
+                .contactoResponsable(finca.getEncargado())
+                .telefonoContacto(finca.getTelefono())
+                .emailContacto(finca.getEmail())
+                .loteId(lote.getId())
+                .codigoLote(lote.getCodigoLote())
+                .nombreLote(lote.getNombre())
+                .tipoFruta(lote.getTipoFruta())
+                .variedad(lote.getVariedad())
+                .areaHectareas(lote.getAreaHectareas())
+                .fechaSiembra(lote.getFechaSiembra())
+                .estadoLote(lote.getEstadoLote())
+                .build();
+    }
+
+    private TrazabilidadCompletaDTO.ProduccionInfo construirProduccionCompleta(Lote lote) {
+        // Obtener la cosecha más reciente
+        Cosecha cosechaReciente = lote.getCosechas().stream()
+                .filter(Cosecha::getActivo)
+                .max((c1, c2) -> c1.getFechaCosecha().compareTo(c2.getFechaCosecha()))
+                .orElse(null);
+
+        // Actividades agronómicas
+        List<TrazabilidadCompletaDTO.ActividadAgronomicaInfo> actividades = lote.getActividades().stream()
+                .filter(ActividadAgronomica::getActivo)
+                .map(a -> TrazabilidadCompletaDTO.ActividadAgronomicaInfo.builder()
+                        .id(a.getId())
+                        .tipoActividad(a.getTipoActividad())
+                        .fechaActividad(a.getFechaActividad())
+                        .descripcion(a.getObservaciones())
+                        .responsable(a.getResponsable())
+                        .productosAplicados(a.getProductoAplicado())
+                        .build())
+                .collect(Collectors.toList());
+
+        return TrazabilidadCompletaDTO.ProduccionInfo.builder()
+                .cosechaId(cosechaReciente != null ? cosechaReciente.getId() : null)
+                .codigoCosecha(cosechaReciente != null ? cosechaReciente.getLote().getCodigoLote() : null)
+                .fechaCosecha(cosechaReciente != null ? cosechaReciente.getFechaCosecha() : null)
+                .cantidadCosechada(cosechaReciente != null ? cosechaReciente.getCantidadCosechada() : null)
+                .unidadMedida(cosechaReciente != null ? cosechaReciente.getUnidadMedida() : null)
+                .estadoFruta(cosechaReciente != null ? cosechaReciente.getEstadoFruta() : null)
+                .responsableCosecha(cosechaReciente != null ? cosechaReciente.getResponsableCosecha() : null)
+                .actividades(actividades)
+                .totalActividades(actividades.size())
+                .build();
+    }
+
+    private TrazabilidadCompletaDTO.EmpaqueInfo construirEmpaqueCompleto(
+            RecepcionPlanta recepcion, Clasificacion clasificacion) {
+
+        // Controles de calidad
+        List<ControlCalidad> controles = controlCalidadRepository
+                .findByClasificacionIdAndActivoTrueOrderByFechaControlDesc(clasificacion.getId());
+
+        List<TrazabilidadCompletaDTO.ControlCalidadInfo> controlesInfo = controles.stream()
+                .map(cc -> TrazabilidadCompletaDTO.ControlCalidadInfo.builder()
+                        .id(cc.getId())
+                        .fechaControl(cc.getFechaControl())
+                        .tipoControl(cc.getTipoControl())
+                        .resultado(cc.getResultado())
+                        .observaciones(cc.getObservaciones())
+                        .inspector(cc.getLaboratorio())
+                        .build())
+                .collect(Collectors.toList());
+
+        // Buscar pallet asociado
+        var etiquetaPallet = etiquetaPalletRepository.findByEtiquetaIdAndActivoTrue(clasificacion.getId());
+        Pallet pallet = etiquetaPallet.map(EtiquetaPallet::getPallet).orElse(null);
+
+        return TrazabilidadCompletaDTO.EmpaqueInfo.builder()
+                .recepcionId(recepcion.getId())
+                .codigoRecepcion(recepcion.getCodigoRecepcion())
+                .fechaRecepcion(recepcion.getFechaRecepcion())
+                .cantidadRecibida(recepcion.getCantidadRecibida())
+                .estadoRecepcion(recepcion.getEstadoRecepcion())
+                .responsableRecepcion(recepcion.getResponsableRecepcion())
+                .clasificacionId(clasificacion.getId())
+                .codigoClasificacion(clasificacion.getCodigoClasificacion())
+                .fechaClasificacion(clasificacion.getFechaClasificacion())
+                .calidad(clasificacion.getCalidad())
+                .calibre(clasificacion.getCalibre())
+                .cantidadClasificada(clasificacion.getCantidadClasificada())
+                .responsableClasificacion(clasificacion.getResponsableClasificacion())
+                .controlesCalidad(controlesInfo)
+                .palletId(pallet != null ? pallet.getId() : null)
+                .codigoPallet(pallet != null ? pallet.getCodigoPallet() : null)
+                .tipoPallet(pallet != null ? pallet.getTipoPallet() : null)
+                .numeroCajas(pallet != null ? pallet.getNumeroCajas() : null)
+                .pesoNeto(pallet != null ? pallet.getPesoNetoTotal() : null)
+                .pesoBruto(pallet != null ? pallet.getPesoBrutoTotal() : null)
+                .estadoPallet(pallet != null ? pallet.getEstadoPallet() : null)
+                .build();
+    }
+
+    private TrazabilidadCompletaDTO.LogisticaInfo construirLogisticaCompleta(Etiqueta etiqueta) {
+        // Buscar si la etiqueta está asignada a un pallet
+        var etiquetaPallet = etiquetaPalletRepository.findByEtiquetaIdAndActivoTrue(etiqueta.getId());
+
+        if (etiquetaPallet.isEmpty()) {
+            return null;
+        }
+
+        Pallet pallet = etiquetaPallet.get().getPallet();
+        if (pallet.getEnvio() == null) {
+            return null;
+        }
+
+        Envio envio = pallet.getEnvio();
+
+        // Eventos logísticos
+        List<TrazabilidadCompletaDTO.EventoLogisticoInfo> eventos = envio.getEventos().stream()
+                .filter(e -> e.getActivo())
+                .map(e -> TrazabilidadCompletaDTO.EventoLogisticoInfo.builder()
+                        .id(e.getId())
+                        .tipoEvento(e.getTipoEvento())
+                        .fechaEvento(e.getFechaEvento().atStartOfDay())
+                        .ubicacion(e.getUbicacion())
+                        .ciudad(e.getCiudad())
+                        .pais(e.getPais())
+                        .descripcion(e.getObservaciones())
+                        .build())
+                .collect(Collectors.toList());
+
+        // Documentos
+        List<TrazabilidadCompletaDTO.DocumentoInfo> documentos = envio.getDocumentos().stream()
+                .filter(d -> d.getActivo())
+                .map(d -> TrazabilidadCompletaDTO.DocumentoInfo.builder()
+                        .id(d.getId())
+                        .tipoDocumento(d.getTipoDocumento())
+                        .numeroDocumento(d.getNumeroDocumento())
+                        .fechaEmision(d.getFechaEmision())
+                        .entidadEmisora(d.getEntidadEmisora())
+                        .estado(d.getEstado())
+                        .build())
+                .collect(Collectors.toList());
+
+        return TrazabilidadCompletaDTO.LogisticaInfo.builder()
+                .envioId(envio.getId())
+                .codigoEnvio(envio.getCodigoEnvio())
+                .fechaCreacion(envio.getFechaCreacion())
+                .fechaSalidaEstimada(envio.getFechaSalidaEstimada())
+                .fechaSalidaReal(envio.getFechaSalidaReal())
+                .estadoEnvio(envio.getEstado())
+                .exportador(envio.getExportador())
+                .paisDestino(envio.getPaisDestino())
+                .puertoDestino(envio.getPuertoDestino())
+                .ciudadDestino(envio.getCiudadDestino())
+                .tipoTransporte(envio.getTipoTransporte())
+                .transportista(envio.getTransportista())
+                .codigoContenedor(envio.getCodigoContenedor())
+                .tipoContenedor(envio.getTipoContenedor())
+                .temperaturaContenedor(envio.getTemperaturaContenedor())
+                .numeroBooking(envio.getNumeroBooking())
+                .numeroBL(envio.getNumeroBL())
+                .totalPallets(envio.getNumeroPallets())
+                .totalCajas(envio.getNumeroCajas())
+                .pesoNetoTotal(envio.getPesoNetoTotal())
+                .pesoBrutoTotal(envio.getPesoBrutoTotal())
+                .clienteImportador(envio.getClienteImportador())
+                .incoterm(envio.getIncoterm())
+                .eventos(eventos)
+                .documentos(documentos)
+                .cerrado(envio.estaCerrado())
+                .hashCierre(envio.getHashCierre())
+                .fechaCierre(envio.getFechaCierre())
+                .usuarioCierre(envio.getUsuarioCierre() != null ? envio.getUsuarioCierre().getEmail() : null)
+                .build();
+    }
+
+    private List<TrazabilidadCompletaDTO.CertificacionCompleta> construirCertificacionesCompletas(Finca finca) {
+        return finca.getCertificaciones().stream()
+                .filter(c -> c.getActivo())
+                .map(cert -> TrazabilidadCompletaDTO.CertificacionCompleta.builder()
+                        .id(cert.getId())
+                        .tipoCertificacion(cert.getTipoCertificacion())
+                        .numeroCertificado(cert.getNumeroCertificado())
+                        .entidadEmisora(cert.getEntidadEmisora())
+                        .fechaEmision(cert.getFechaEmision())
+                        .fechaVencimiento(cert.getFechaVencimiento())
+                        .estado(cert.getEstado())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    private TrazabilidadCompletaDTO.AuditoriaInfo construirAuditoriaInfo(Etiqueta etiqueta, Finca finca) {
+        return TrazabilidadCompletaDTO.AuditoriaInfo.builder()
+                .fechaCreacionEtiqueta(etiqueta.getCreatedAt())
+                .fechaUltimaActualizacion(etiqueta.getUpdatedAt())
+                .creadoPor(etiqueta.getClasificacion().getRecepcion().getLote().getFinca().getEmpresa().getRazonSocial())
+                .empresaId(finca.getEmpresa().getId())
+                .empresaNombre(finca.getEmpresa().getRazonSocial())
+                .totalEventosAuditoria(0) // Podría calcularse consultando AuditoriaEvento
+                .build();
     }
 }

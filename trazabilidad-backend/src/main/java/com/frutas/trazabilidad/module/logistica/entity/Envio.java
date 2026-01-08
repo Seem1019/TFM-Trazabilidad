@@ -20,6 +20,7 @@ import java.util.List;
  */
 @Entity
 @Table(name = "envios")
+@EntityListeners(com.frutas.trazabilidad.listener.AuditEntityListener.class)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

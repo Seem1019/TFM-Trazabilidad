@@ -15,6 +15,7 @@ import java.util.List;
 @Table(name = "lotes", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"codigo_lote", "finca_id"})
 })
+@EntityListeners(com.frutas.trazabilidad.listener.AuditEntityListener.class)
 @Getter
 @Setter
 @NoArgsConstructor

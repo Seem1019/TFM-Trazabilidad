@@ -1,5 +1,6 @@
 package com.frutas.trazabilidad.module.empaque.controller;
 
+import com.frutas.trazabilidad.dto.TrazabilidadCompletaDTO;
 import com.frutas.trazabilidad.dto.TrazabilidadPublicaDTO;
 import com.frutas.trazabilidad.entity.User;
 import com.frutas.trazabilidad.module.empaque.dto.EtiquetaRequest;
@@ -109,5 +110,18 @@ public class EtiquetaController {
             @PathVariable String codigoQr) {
         TrazabilidadPublicaDTO trazabilidad = trazabilidadService.obtenerTrazabilidadPublica(codigoQr);
         return ResponseEntity.ok(ApiResponse.success(trazabilidad, "Trazabilidad completa obtenida exitosamente"));
+    }
+
+    /**
+     * Endpoint interno para consulta de trazabilidad completa con todos los datos.
+     * Solo accesible para usuarios autenticados de la empresa.
+     * Retorna información completa incluyendo datos sensibles.
+     */
+    @GetMapping("/{id}/trazabilidad")
+    public ResponseEntity<ApiResponse<TrazabilidadCompletaDTO>> consultarTrazabilidadCompleta(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user) {
+        TrazabilidadCompletaDTO trazabilidad = trazabilidadService.obtenerTrazabilidadCompleta(id, user.getEmpresa().getId());
+        return ResponseEntity.ok(ApiResponse.success(trazabilidad, "Trazabilidad completa interna obtenida exitosamente"));
     }
 }

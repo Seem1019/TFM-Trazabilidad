@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "certificaciones")
+@EntityListeners(com.frutas.trazabilidad.listener.AuditEntityListener.class)
 @Getter
 @Setter
 @NoArgsConstructor
