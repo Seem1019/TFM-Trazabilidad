@@ -26,7 +26,7 @@ import java.time.LocalTime;
  * Solo se ejecuta en perfil 'dev' o 'test'.
  */
 @Component
-@Profile({"dev", "test","production"})
+@Profile({"dev", "test","prod"})
 @RequiredArgsConstructor
 @Slf4j
 public class DataSeeder implements CommandLineRunner {
