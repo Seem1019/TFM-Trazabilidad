@@ -9,7 +9,9 @@ import {
   Package,
   Tags,
   Boxes,
+  ClipboardCheck,
   Truck,
+  CalendarClock,
   FileText,
   Search,
   Users,
@@ -65,12 +67,14 @@ const navGroups: NavGroup[] = [
       { title: 'Clasificación', href: '/clasificacion', icon: Package },
       { title: 'Etiquetas', href: '/etiquetas', icon: Tags },
       { title: 'Pallets', href: '/pallets', icon: Boxes },
+      { title: 'Control Calidad', href: '/control-calidad', icon: ClipboardCheck },
     ],
   },
   {
     title: 'Logística',
     items: [
       { title: 'Envíos', href: '/envios', icon: Truck },
+      { title: 'Eventos', href: '/eventos', icon: CalendarClock },
       { title: 'Documentos', href: '/documentos', icon: FileText },
     ],
   },
@@ -83,7 +87,7 @@ const navGroups: NavGroup[] = [
   {
     title: 'Administración',
     items: [
-      { title: 'Usuarios', href: '/usuarios', icon: Users, roles: ['ADMIN_SISTEMA', 'ADMIN_EMPRESA'] },
+      { title: 'Usuarios', href: '/usuarios', icon: Users, roles: ['ADMIN'] },
     ],
   },
 ];

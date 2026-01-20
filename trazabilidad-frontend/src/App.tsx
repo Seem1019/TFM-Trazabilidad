@@ -26,15 +26,25 @@ import {
   ControlCalidadPage,
 } from '@/pages/empaque';
 
-// Placeholder para páginas pendientes
-function PlaceholderPage({ title }: { title: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-[400px]">
-      <h1 className="text-2xl font-bold mb-2">{title}</h1>
-      <p className="text-muted-foreground">Página en construcción</p>
-    </div>
-  );
-}
+// Logística
+import {
+  EnviosPage,
+  EventosPage,
+  DocumentosPage,
+} from '@/pages/logistica';
+
+// Trazabilidad
+import {
+  TrazabilidadPublicaPage,
+  TrazabilidadInternaPage,
+} from '@/pages/trazabilidad';
+
+// Admin
+import { UsuariosPage } from '@/pages/admin';
+
+// Profile & Settings
+import { PerfilPage } from '@/pages/profile';
+import { ConfiguracionPage } from '@/pages/settings';
 
 function App() {
   return (
@@ -51,7 +61,7 @@ function App() {
           {/* Ruta pública de trazabilidad (sin layout especial) */}
           <Route
             path="/public/trazabilidad/:uuid"
-            element={<PlaceholderPage title="Trazabilidad Pública" />}
+            element={<TrazabilidadPublicaPage />}
           />
 
           {/* Rutas protegidas (requieren autenticación) */}
@@ -79,31 +89,26 @@ function App() {
             <Route path="/control-calidad" element={<ControlCalidadPage />} />
 
             {/* Logística */}
-            <Route path="/envios" element={<PlaceholderPage title="Envíos" />} />
-            <Route
-              path="/eventos"
-              element={<PlaceholderPage title="Eventos Logísticos" />}
-            />
-            <Route
-              path="/documentos"
-              element={<PlaceholderPage title="Documentos de Exportación" />}
-            />
+            <Route path="/envios" element={<EnviosPage />} />
+            <Route path="/eventos" element={<EventosPage />} />
+            <Route path="/documentos" element={<DocumentosPage />} />
 
             {/* Trazabilidad */}
-            <Route
-              path="/trazabilidad"
-              element={<PlaceholderPage title="Consulta de Trazabilidad" />}
-            />
+            <Route path="/trazabilidad" element={<TrazabilidadInternaPage />} />
 
             {/* Admin */}
             <Route
               path="/usuarios"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN_SISTEMA', 'ADMIN_EMPRESA']}>
-                  <PlaceholderPage title="Gestión de Usuarios" />
+                <ProtectedRoute allowedRoles={['ADMIN']}>
+                  <UsuariosPage />
                 </ProtectedRoute>
               }
             />
+
+            {/* Perfil y Configuración */}
+            <Route path="/perfil" element={<PerfilPage />} />
+            <Route path="/configuracion" element={<ConfiguracionPage />} />
           </Route>
 
           {/* Ruta por defecto - redirigir al dashboard */}

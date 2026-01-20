@@ -1,6 +1,9 @@
-import { LogOut, User, Settings, Bell } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { LogOut, User, Settings, Bell, Check, Trash2, X } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { formatDistanceToNow } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { useAuthStore } from '@/store/authStore';
+import { useNotificationStore } from '@/store/notificationStore';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -11,9 +14,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
+import type { NotificationType } from '@/types';
 
 export function Header() {
   const { user, logout } = useAuthStore();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification, clearAll } =
+    useNotificationStore();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -29,14 +38,30 @@ export function Header() {
 
   const getRolLabel = (rol?: string) => {
     const roles: Record<string, string> = {
-      ADMIN_SISTEMA: 'Admin Sistema',
-      ADMIN_EMPRESA: 'Admin Empresa',
+      ADMIN: 'Administrador',
       PRODUCTOR: 'Productor',
       OPERADOR_PLANTA: 'Operador Planta',
       OPERADOR_LOGISTICA: 'Operador Logística',
       AUDITOR: 'Auditor',
     };
     return rol ? roles[rol] || rol : '';
+  };
+
+  const getNotificationIcon = (type: NotificationType) => {
+    const colors: Record<NotificationType, string> = {
+      success: 'bg-green-500',
+      error: 'bg-red-500',
+      warning: 'bg-yellow-500',
+      info: 'bg-blue-500',
+    };
+    return colors[type];
+  };
+
+  const handleNotificationClick = (id: string, link?: string) => {
+    markAsRead(id);
+    if (link) {
+      navigate(link);
+    }
   };
 
   return (
@@ -49,12 +74,101 @@ export function Header() {
 
       <div className="flex items-center gap-4">
         {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
-            3
-          </span>
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="relative">
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-80">
+            <DropdownMenuLabel className="flex items-center justify-between">
+              <span>Notificaciones</span>
+              {notifications.length > 0 && (
+                <div className="flex gap-1">
+                  {unreadCount > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        markAllAsRead();
+                      }}
+                    >
+                      <Check className="mr-1 h-3 w-3" />
+                      Marcar todo
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs text-muted-foreground"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      clearAll();
+                    }}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {notifications.length === 0 ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                No hay notificaciones
+              </div>
+            ) : (
+              <ScrollArea className="h-[300px]">
+                {notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={cn(
+                      'flex items-start gap-3 p-3 hover:bg-muted/50 cursor-pointer border-b last:border-0',
+                      !notification.read && 'bg-muted/30'
+                    )}
+                    onClick={() => handleNotificationClick(notification.id, notification.link)}
+                  >
+                    <div
+                      className={cn(
+                        'mt-1 h-2 w-2 rounded-full shrink-0',
+                        getNotificationIcon(notification.type)
+                      )}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{notification.title}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {notification.message}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatDistanceToNow(new Date(notification.timestamp), {
+                          addSuffix: true,
+                          locale: es,
+                        })}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 shrink-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeNotification(notification.id);
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </ScrollArea>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* User Menu */}
         <DropdownMenu>
@@ -73,22 +187,24 @@ export function Header() {
                 <p className="text-sm font-medium leading-none">
                   {user?.nombre} {user?.apellido}
                 </p>
-                <p className="text-xs leading-none text-muted-foreground">
-                  {user?.email}
-                </p>
-                <p className="text-xs leading-none text-muted-foreground">
+                <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                <Badge variant="secondary" className="w-fit mt-1 text-xs">
                   {getRolLabel(user?.rol)}
-                </p>
+                </Badge>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <User className="mr-2 h-4 w-4" />
-              <span>Perfil</span>
+            <DropdownMenuItem asChild>
+              <Link to="/perfil">
+                <User className="mr-2 h-4 w-4" />
+                <span>Perfil</span>
+              </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Configuración</span>
+            <DropdownMenuItem asChild>
+              <Link to="/configuracion">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Configuración</span>
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-destructive">
