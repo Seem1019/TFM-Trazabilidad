@@ -26,10 +26,10 @@ export const DEFAULT_OPERATOR_CREDENTIALS: LoginCredentials = {
  */
 export async function login(page: Page, credentials: LoginCredentials = DEFAULT_ADMIN_CREDENTIALS): Promise<void> {
   await page.goto('/login');
-  await page.getByLabel(/email/i).fill(credentials.email);
-  await page.getByLabel(/contraseña/i).fill(credentials.password);
-  await page.getByRole('button', { name: /ingresar|iniciar/i }).click();
-  await page.waitForURL(/\/dashboard|\/$/, { timeout: 10000 });
+  await page.getByLabel('Correo electrónico').fill(credentials.email);
+  await page.getByLabel('Contraseña').fill(credentials.password);
+  await page.getByRole('button', { name: 'Iniciar Sesión' }).click();
+  await page.waitForURL('/', { timeout: 10000 });
 }
 
 /**
@@ -37,12 +37,16 @@ export async function login(page: Page, credentials: LoginCredentials = DEFAULT_
  * @param page - Playwright page object
  */
 export async function logout(page: Page): Promise<void> {
-  const userMenu = page.getByRole('button', { name: /usuario|perfil|admin/i });
-  if (await userMenu.isVisible()) {
-    await userMenu.click();
+  const logoutButton = page.getByRole('button', { name: /cerrar sesión|logout|salir/i });
+  const userMenuButton = page.getByRole('button', { name: /usuario|perfil|admin/i });
+
+  if (await logoutButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await logoutButton.click();
+  } else if (await userMenuButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await userMenuButton.click();
     await page.getByRole('menuitem', { name: /cerrar sesión|logout|salir/i }).click();
   } else {
-    await page.getByRole('button', { name: /cerrar sesión|logout|salir/i }).click();
+    await page.locator('[data-testid="logout"], [aria-label*="logout"], [aria-label*="salir"]').first().click();
   }
   await page.waitForURL(/\/login/);
 }
@@ -52,8 +56,14 @@ export async function logout(page: Page): Promise<void> {
  * @param page - Playwright page object
  */
 export async function isLoggedIn(page: Page): Promise<boolean> {
-  const token = await page.evaluate(() => localStorage.getItem('token'));
-  return !!token;
+  const storage = await page.evaluate(() => localStorage.getItem('auth-storage'));
+  if (!storage) return false;
+  try {
+    const parsed = JSON.parse(storage);
+    return !!(parsed.state?.token || parsed.state?.user);
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -61,6 +71,12 @@ export async function isLoggedIn(page: Page): Promise<boolean> {
  * @param page - Playwright page object
  */
 export async function getCurrentUser(page: Page): Promise<object | null> {
-  const userJson = await page.evaluate(() => localStorage.getItem('user'));
-  return userJson ? JSON.parse(userJson) : null;
+  const storage = await page.evaluate(() => localStorage.getItem('auth-storage'));
+  if (!storage) return null;
+  try {
+    const parsed = JSON.parse(storage);
+    return parsed.state?.user || null;
+  } catch {
+    return null;
+  }
 }

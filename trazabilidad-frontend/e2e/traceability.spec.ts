@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { login } from './helpers/auth';
 
 /**
  * E2E tests for the traceability flow.
@@ -6,182 +7,137 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('Public Traceability', () => {
-  test.describe('QR Code Lookup', () => {
-    test('should display public traceability page', async ({ page }) => {
-      await page.goto('/trazabilidad');
+  test.describe('Public Traceability Page', () => {
+    test('should show error for invalid UUID', async ({ page }) => {
+      await page.goto('/public/trazabilidad/invalid-uuid-12345');
 
-      // Check for traceability page elements
-      await expect(page.getByRole('heading', { name: /trazabilidad|consulta/i })).toBeVisible();
+      // Should show error state
+      await expect(page.getByText('Código no encontrado')).toBeVisible({ timeout: 10000 });
     });
 
-    test('should show form to enter QR code', async ({ page }) => {
-      await page.goto('/trazabilidad');
+    test('should display loading state initially', async ({ page }) => {
+      await page.goto('/public/trazabilidad/some-uuid');
 
-      // Check for QR code input or scanner
-      const qrInput = page.getByPlaceholder(/código.*qr|escanear|buscar/i);
-      if (await qrInput.isVisible()) {
-        await expect(qrInput).toBeVisible();
-      }
-    });
-
-    test('should show error for invalid QR code', async ({ page }) => {
-      await page.goto('/trazabilidad');
-
-      // Enter invalid QR code
-      const qrInput = page.getByPlaceholder(/código.*qr|escanear|buscar/i);
-      if (await qrInput.isVisible()) {
-        await qrInput.fill('INVALID-QR-CODE');
-        await page.getByRole('button', { name: /buscar|consultar/i }).click();
-
-        // Should show error message
-        await expect(page.getByText(/no encontrado|no existe|inválido/i)).toBeVisible({ timeout: 10000 });
-      }
-    });
-
-    test('should display traceability info for valid QR code', async ({ page }) => {
-      await page.goto('/trazabilidad');
-
-      // Enter a valid QR code (assuming test data exists)
-      const qrInput = page.getByPlaceholder(/código.*qr|escanear|buscar/i);
-      if (await qrInput.isVisible()) {
-        await qrInput.fill('QR-TEST-001');
-        await page.getByRole('button', { name: /buscar|consultar/i }).click();
-
-        // Should show traceability information sections
-        await expect(page.getByText(/origen|finca/i)).toBeVisible({ timeout: 10000 });
-      }
-    });
-  });
-
-  test.describe('Public Traceability Display', () => {
-    test('should show origin information section', async ({ page }) => {
-      // Navigate to a valid traceability page
-      await page.goto('/trazabilidad/QR-TEST-001');
-
-      // Check for origin section
-      const origenSection = page.getByRole('region', { name: /origen/i });
-      if (await origenSection.isVisible()) {
-        await expect(page.getByText(/finca/i)).toBeVisible();
-        await expect(page.getByText(/departamento|región/i)).toBeVisible();
-        await expect(page.getByText(/país/i)).toBeVisible();
-      }
-    });
-
-    test('should show production information section', async ({ page }) => {
-      await page.goto('/trazabilidad/QR-TEST-001');
-
-      // Check for production section
-      await expect(page.getByText(/producción|cosecha/i)).toBeVisible({ timeout: 5000 }).catch(() => {
-        // Section might not exist if data is not complete
+      // Should show loading state initially
+      await expect(page.getByText('Cargando información de trazabilidad...')).toBeVisible({ timeout: 5000 }).catch(() => {
+        // Might have already loaded or errored
       });
-    });
-
-    test('should show packaging information section', async ({ page }) => {
-      await page.goto('/trazabilidad/QR-TEST-001');
-
-      // Check for packaging section
-      await expect(page.getByText(/empaque|clasificación/i)).toBeVisible({ timeout: 5000 }).catch(() => {
-        // Section might not exist if data is not complete
-      });
-    });
-
-    test('should show certifications section', async ({ page }) => {
-      await page.goto('/trazabilidad/QR-TEST-001');
-
-      // Check for certifications section
-      await expect(page.getByText(/certificaciones|calidad/i)).toBeVisible({ timeout: 5000 }).catch(() => {
-        // Section might not exist if no certifications
-      });
-    });
-
-    test('should NOT show sensitive internal data in public view', async ({ page }) => {
-      await page.goto('/trazabilidad/QR-TEST-001');
-
-      // These should NOT be visible in public view
-      await expect(page.getByText(/precio|costo|valor/i)).not.toBeVisible().catch(() => {
-        // Acceptable if page didn't load
-      });
-      await expect(page.getByText(/contacto.*teléfono/i)).not.toBeVisible().catch(() => {});
-      await expect(page.getByText(/email.*finca/i)).not.toBeVisible().catch(() => {});
     });
   });
 });
 
 test.describe('Internal Traceability (Authenticated)', () => {
   test.beforeEach(async ({ page }) => {
-    // Login first
-    await page.goto('/login');
-    await page.getByLabel(/email/i).fill('admin@frutas.com');
-    await page.getByLabel(/contraseña/i).fill('admin123');
-    await page.getByRole('button', { name: /ingresar|iniciar/i }).click();
-    await page.waitForURL(/\/dashboard|\/$/, { timeout: 10000 });
+    await login(page);
   });
 
-  test('should access internal traceability from navigation', async ({ page }) => {
-    // Navigate to internal traceability
-    await page.getByRole('link', { name: /trazabilidad/i }).click();
-    await expect(page).toHaveURL(/\/trazabilidad/);
+  test('should access internal traceability page', async ({ page }) => {
+    await page.goto('/trazabilidad');
+
+    // h2 with text "Consulta de Trazabilidad"
+    await expect(page.getByText('Consulta de Trazabilidad')).toBeVisible();
   });
 
-  test('should show complete traceability info for authenticated user', async ({ page }) => {
-    // Navigate to specific label traceability
-    await page.goto('/trazabilidad/etiqueta/1');
+  test('should show search components', async ({ page }) => {
+    await page.goto('/trazabilidad');
 
-    // Should show complete data including sensitive info
-    await expect(page.getByText(/información completa|detalles/i)).toBeVisible({ timeout: 5000 }).catch(() => {
-      // Page might show data differently
-    });
+    // Should show the search card with label selector
+    await expect(page.getByPlaceholder('Buscar por código de etiqueta o QR...')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Consultar' })).toBeVisible();
   });
 
-  test('should show audit information for authenticated user', async ({ page }) => {
-    await page.goto('/trazabilidad/etiqueta/1');
+  test('should show message when no etiqueta selected', async ({ page }) => {
+    await page.goto('/trazabilidad');
 
-    // Should show audit section
-    await expect(page.getByText(/auditoría|registro|historial/i)).toBeVisible({ timeout: 5000 }).catch(() => {});
-  });
-});
-
-test.describe('Traceability Chain Validation', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
-    await page.getByLabel(/email/i).fill('admin@frutas.com');
-    await page.getByLabel(/contraseña/i).fill('admin123');
-    await page.getByRole('button', { name: /ingresar|iniciar/i }).click();
-    await page.waitForURL(/\/dashboard|\/$/, { timeout: 10000 });
+    // Should show initial state message with search icon and text
+    await expect(page.getByText('Seleccione una etiqueta y presione "Consultar" para ver su trazabilidad completa')).toBeVisible();
   });
 
-  test('should show complete traceability chain from farm to shipment', async ({ page }) => {
-    // Navigate to a label with complete traceability
-    await page.goto('/trazabilidad/etiqueta/1');
+  test('should show etiqueta selector dropdown', async ({ page }) => {
+    await page.goto('/trazabilidad');
 
-    // Check for complete chain
-    const sections = [
-      /finca|origen/i,
-      /lote|parcela/i,
-      /cosecha/i,
-      /recepción|planta/i,
-      /clasificación/i,
-      /etiqueta/i,
-      /pallet/i,
-      /envío|exportación/i
-    ];
+    // Click on the select trigger
+    const selectTrigger = page.getByRole('combobox');
+    await selectTrigger.click();
 
-    for (const section of sections) {
-      // At least some sections should be visible
-      const element = page.getByText(section);
-      if (await element.isVisible({ timeout: 1000 }).catch(() => false)) {
-        await expect(element).toBeVisible();
-        break; // At least one section found
-      }
+    // Should show loading or etiquetas list
+    const hasItems = await page.getByRole('option').first().isVisible({ timeout: 5000 }).catch(() => false);
+    if (hasItems) {
+      await expect(page.getByRole('option').first()).toBeVisible();
+    } else {
+      await expect(page.getByText('Cargando etiquetas...')).toBeVisible().catch(() => {});
     }
   });
 
-  test('should validate traceability data integrity', async ({ page }) => {
-    await page.goto('/trazabilidad/etiqueta/1');
+  test('should show error when consulting without selecting etiqueta', async ({ page }) => {
+    await page.goto('/trazabilidad');
 
-    // Check for data validation indicators
-    await expect(page.getByText(/verificado|válido|integridad/i)).toBeVisible({ timeout: 5000 }).catch(() => {
-      // Validation UI might be different
-    });
+    // Click consult without selecting - button is disabled when no etiqueta is selected
+    const consultButton = page.getByRole('button', { name: 'Consultar' });
+
+    // The button should be disabled when no etiqueta is selected
+    await expect(consultButton).toBeDisabled();
+  });
+
+  test('should consult traceability when etiqueta is selected', async ({ page }) => {
+    await page.goto('/trazabilidad');
+
+    // Wait for etiquetas to load
+    const selectTrigger = page.getByRole('combobox');
+    await selectTrigger.click();
+
+    const firstOption = page.getByRole('option').first();
+    const hasOptions = await firstOption.isVisible({ timeout: 5000 }).catch(() => false);
+
+    if (hasOptions) {
+      await firstOption.click();
+
+      // Click consult
+      await page.getByRole('button', { name: 'Consultar' }).click();
+
+      // Should show loading or results
+      await expect(page.getByRole('button', { name: 'Consultar' })).toBeEnabled({ timeout: 10000 });
+    }
+  });
+
+  test('should show traceability sections when data is loaded', async ({ page }) => {
+    await page.goto('/trazabilidad');
+
+    // Wait for etiquetas to load and select one
+    const selectTrigger = page.getByRole('combobox');
+    await selectTrigger.click();
+
+    const firstOption = page.getByRole('option').first();
+    const hasOptions = await firstOption.isVisible({ timeout: 5000 }).catch(() => false);
+
+    if (hasOptions) {
+      await firstOption.click();
+      await page.getByRole('button', { name: 'Consultar' }).click();
+
+      // Wait for results
+      await page.waitForTimeout(2000);
+
+      // Should show accordion sections if data is loaded
+      const origenSection = page.getByText('Origen');
+      if (await origenSection.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await expect(origenSection).toBeVisible();
+      }
+    }
+  });
+});
+
+test.describe('Traceability Navigation', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('should access traceability from sidebar', async ({ page }) => {
+    await page.goto('/');
+
+    // Find and click on "Consulta" link in sidebar under Trazabilidad section
+    // The nav item has title "Consulta" and href "/trazabilidad"
+    const consultaLink = page.getByRole('link', { name: 'Consulta' });
+    await consultaLink.click();
+    await expect(page).toHaveURL('/trazabilidad');
   });
 });

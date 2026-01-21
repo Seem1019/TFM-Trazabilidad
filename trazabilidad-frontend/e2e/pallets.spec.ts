@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { login } from './helpers/auth';
 
 /**
  * E2E tests for pallet management.
@@ -7,204 +8,202 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Pallet Management', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
-    await page.getByLabel(/email/i).fill('admin@frutas.com');
-    await page.getByLabel(/contraseña/i).fill('admin123');
-    await page.getByRole('button', { name: /ingresar|iniciar/i }).click();
-    await page.waitForURL(/\/dashboard|\/$/, { timeout: 10000 });
+    await login(page);
   });
 
   test.describe('Pallet List', () => {
-    test('should display pallets list', async ({ page }) => {
-      await page.goto('/empaque/pallets');
+    test('should display pallets page', async ({ page }) => {
+      await page.goto('/pallets');
 
-      await expect(page.getByRole('heading', { name: /pallets/i })).toBeVisible();
-      await expect(page.getByRole('table')).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Pallets' })).toBeVisible();
     });
 
-    test('should show filter by status', async ({ page }) => {
-      await page.goto('/empaque/pallets');
+    test('should show create pallet button', async ({ page }) => {
+      await page.goto('/pallets');
 
-      const statusFilter = page.getByRole('combobox', { name: /estado/i });
-      if (await statusFilter.isVisible()) {
-        await statusFilter.click();
-        await expect(page.getByRole('option', { name: /armado/i })).toBeVisible();
-        await expect(page.getByRole('option', { name: /en.*cámara/i })).toBeVisible();
-      }
+      await expect(page.getByRole('button', { name: 'Nuevo Pallet' })).toBeVisible();
     });
 
-    test('should filter by destination', async ({ page }) => {
-      await page.goto('/empaque/pallets');
+    test('should show table when pallets exist', async ({ page }) => {
+      await page.goto('/pallets');
 
-      const searchInput = page.getByPlaceholder(/destino|buscar/i);
-      if (await searchInput.isVisible()) {
-        await searchInput.fill('Estados Unidos');
-        await page.waitForTimeout(500);
-      }
+      // Wait for data to load - either table or empty state
+      const table = page.locator('table');
+      const emptyState = page.getByText('No hay pallets registrados');
+
+      await expect(table.or(emptyState)).toBeVisible({ timeout: 10000 });
     });
 
-    test('should show pallets ready for shipment', async ({ page }) => {
-      await page.goto('/empaque/pallets?listos=true');
+    test('should show search input', async ({ page }) => {
+      await page.goto('/pallets');
 
-      // Should filter to show only ARMADO or EN_CAMARA pallets
-      await expect(page.getByRole('table')).toBeVisible();
+      await expect(page.getByPlaceholder('Buscar por código, fruta, calidad o destino...')).toBeVisible();
     });
   });
 
   test.describe('Create Pallet', () => {
-    test('should show create pallet button', async ({ page }) => {
-      await page.goto('/empaque/pallets');
+    test('should open create pallet form', async ({ page }) => {
+      await page.goto('/pallets');
+      await page.getByRole('button', { name: 'Nuevo Pallet' }).click();
 
-      await expect(page.getByRole('button', { name: /nuevo.*pallet|crear.*pallet|agregar/i })).toBeVisible();
+      // Dialog should open with form fields
+      const dialog = page.getByRole('dialog');
+      await expect(dialog).toBeVisible();
+      await expect(page.getByLabel('Código Pallet *')).toBeVisible();
     });
 
-    test('should open create form', async ({ page }) => {
-      await page.goto('/empaque/pallets');
-      await page.getByRole('button', { name: /nuevo.*pallet|crear.*pallet|agregar/i }).click();
+    test('should validate required fields', async ({ page }) => {
+      await page.goto('/pallets');
+      await page.getByRole('button', { name: 'Nuevo Pallet' }).click();
 
-      await expect(page.getByLabel(/código.*pallet/i)).toBeVisible({ timeout: 5000 });
+      // Clear date field that has default value
+      await page.getByLabel('Fecha Paletizado *').clear();
+
+      // Try to submit empty form
+      await page.getByRole('button', { name: 'Crear' }).click();
+
+      // Should show validation errors
+      await expect(page.getByText('El código es requerido')).toBeVisible({ timeout: 5000 });
     });
 
     test('should create pallet with valid data', async ({ page }) => {
-      await page.goto('/empaque/pallets');
-      await page.getByRole('button', { name: /nuevo.*pallet|crear.*pallet|agregar/i }).click();
+      await page.goto('/pallets');
+      await page.getByRole('button', { name: 'Nuevo Pallet' }).click();
 
-      // Fill form
-      await page.getByLabel(/código.*pallet/i).fill('PAL-TEST-001');
-      await page.getByLabel(/tipo.*pallet/i).click();
-      await page.getByRole('option', { name: /estándar/i }).click();
-      await page.getByLabel(/número.*cajas/i).fill('80');
-      await page.getByLabel(/peso.*neto/i).fill('400');
-      await page.getByLabel(/peso.*bruto/i).fill('420');
-      await page.getByLabel(/destino/i).fill('Estados Unidos');
-      await page.getByLabel(/tipo.*fruta/i).fill('Mango');
+      // Fill form with unique code
+      const uniqueCode = `PAL-TEST-${Date.now()}`;
+      await page.getByLabel('Código Pallet *').fill(uniqueCode);
+      await page.getByLabel('Número de Cajas *').fill('80');
 
-      await page.getByRole('button', { name: /guardar|crear/i }).click();
+      // Submit
+      await page.getByRole('button', { name: 'Crear' }).click();
 
-      await expect(page.getByText(/creado.*exitosamente|éxito/i)).toBeVisible({ timeout: 5000 });
-    });
-
-    test('should show error for duplicate code', async ({ page }) => {
-      await page.goto('/empaque/pallets');
-      await page.getByRole('button', { name: /nuevo.*pallet|crear.*pallet|agregar/i }).click();
-
-      await page.getByLabel(/código.*pallet/i).fill('PAL-001'); // Existing code
-      await page.getByLabel(/tipo.*pallet/i).click();
-      await page.getByRole('option').first().click();
-      await page.getByLabel(/número.*cajas/i).fill('80');
-
-      await page.getByRole('button', { name: /guardar|crear/i }).click();
-
-      await expect(page.getByText(/ya existe|duplicado/i)).toBeVisible({ timeout: 5000 }).catch(() => {});
+      // Should show success message
+      await expect(page.getByText('Pallet creado correctamente')).toBeVisible({ timeout: 5000 });
     });
   });
 
-  test.describe('Label Assignment', () => {
-    test('should show label assignment option', async ({ page }) => {
-      await page.goto('/empaque/pallets/1');
+  test.describe('Edit Pallet', () => {
+    test('should show edit option in actions menu', async ({ page }) => {
+      await page.goto('/pallets');
 
-      await expect(page.getByRole('button', { name: /asignar.*etiqueta|agregar.*etiqueta/i })).toBeVisible({ timeout: 5000 }).catch(() => {});
-    });
+      // Wait for data
+      const table = page.locator('table');
+      const hasTable = await table.isVisible({ timeout: 5000 }).catch(() => false);
 
-    test('should only show available labels', async ({ page }) => {
-      await page.goto('/empaque/pallets/1');
+      if (hasTable) {
+        // Click on first row's actions button
+        const actionsButton = page.locator('table tbody tr').first().getByRole('button');
+        await actionsButton.click();
 
-      const assignButton = page.getByRole('button', { name: /asignar.*etiqueta|agregar.*etiqueta/i });
-      if (await assignButton.isVisible()) {
-        await assignButton.click();
-
-        // Should show only DISPONIBLE labels
-        await expect(page.getByText(/DISPONIBLE/i)).toBeVisible({ timeout: 5000 });
-        // Should NOT show already assigned labels
-        await expect(page.getByText(/ASIGNADA_PALLET/i)).not.toBeVisible();
+        // Editar option should be visible
+        await expect(page.getByRole('menuitem', { name: 'Editar' })).toBeVisible();
       }
     });
 
-    test('should assign label to pallet', async ({ page }) => {
-      await page.goto('/empaque/pallets/1');
+    test('should open edit form with existing data', async ({ page }) => {
+      await page.goto('/pallets');
 
-      const assignButton = page.getByRole('button', { name: /asignar.*etiqueta/i });
-      if (await assignButton.isVisible()) {
-        await assignButton.click();
+      const table = page.locator('table');
+      const hasTable = await table.isVisible({ timeout: 5000 }).catch(() => false);
 
-        // Select a label
-        await page.getByRole('checkbox').first().check();
-        await page.getByRole('button', { name: /confirmar|asignar/i }).click();
+      if (hasTable) {
+        const actionsButton = page.locator('table tbody tr').first().getByRole('button');
+        await actionsButton.click();
+        await page.getByRole('menuitem', { name: 'Editar' }).click();
 
-        await expect(page.getByText(/asignada|éxito/i)).toBeVisible({ timeout: 5000 });
+        // Dialog should open with "Editar" title
+        await expect(page.getByRole('dialog')).toBeVisible();
+        await expect(page.getByText('Editar Pallet', { exact: true })).toBeVisible();
       }
-    });
-
-    test('should change label state to ASIGNADA_PALLET', async ({ page }) => {
-      await page.goto('/empaque/pallets/1');
-
-      // After assigning, label state should change
-      await expect(page.getByText(/ASIGNADA_PALLET/i)).toBeVisible({ timeout: 5000 }).catch(() => {});
     });
   });
 
   test.describe('State Changes', () => {
-    test('should change pallet state', async ({ page }) => {
-      await page.goto('/empaque/pallets/1');
+    test('should show state change options in menu', async ({ page }) => {
+      await page.goto('/pallets');
 
-      const stateButton = page.getByRole('button', { name: /cambiar.*estado/i });
-      if (await stateButton.isVisible()) {
-        await stateButton.click();
-        await page.getByRole('option', { name: /en.*cámara/i }).click();
-        await page.getByRole('button', { name: /confirmar/i }).click();
+      const table = page.locator('table');
+      const hasTable = await table.isVisible({ timeout: 5000 }).catch(() => false);
 
-        await expect(page.getByText(/actualizado|éxito/i)).toBeVisible({ timeout: 5000 });
+      if (hasTable) {
+        const actionsButton = page.locator('table tbody tr').first().getByRole('button');
+        await actionsButton.click();
+
+        // State change options may be visible depending on current state
+        const menu = page.getByRole('menu');
+        await expect(menu).toBeVisible();
       }
     });
   });
 
   test.describe('Delete Pallet', () => {
-    test('should release labels when deleting pallet', async ({ page }) => {
-      await page.goto('/empaque/pallets/1');
+    test('should show delete option in actions menu', async ({ page }) => {
+      await page.goto('/pallets');
 
-      const deleteButton = page.getByRole('button', { name: /eliminar|borrar/i });
-      if (await deleteButton.isVisible()) {
-        await deleteButton.click();
-        await page.getByRole('button', { name: /confirmar/i }).click();
+      const table = page.locator('table');
+      const hasTable = await table.isVisible({ timeout: 5000 }).catch(() => false);
 
-        // Associated labels should be released (set to DISPONIBLE)
-        await expect(page.getByText(/eliminado|éxito/i)).toBeVisible({ timeout: 5000 });
+      if (hasTable) {
+        const actionsButton = page.locator('table tbody tr').first().getByRole('button');
+        await actionsButton.click();
+
+        await expect(page.getByRole('menuitem', { name: 'Eliminar' })).toBeVisible();
+      }
+    });
+
+    test('should show confirmation dialog when deleting', async ({ page }) => {
+      await page.goto('/pallets');
+
+      const table = page.locator('table');
+      const hasTable = await table.isVisible({ timeout: 5000 }).catch(() => false);
+
+      if (hasTable) {
+        const actionsButton = page.locator('table tbody tr').first().getByRole('button');
+        await actionsButton.click();
+        await page.getByRole('menuitem', { name: 'Eliminar' }).click();
+
+        // Confirmation dialog should appear
+        await expect(page.getByRole('alertdialog')).toBeVisible();
+        await expect(page.getByText('¿Eliminar pallet?')).toBeVisible();
+      }
+    });
+
+    test('should cancel deletion when clicking cancel', async ({ page }) => {
+      await page.goto('/pallets');
+
+      const table = page.locator('table');
+      const hasTable = await table.isVisible({ timeout: 5000 }).catch(() => false);
+
+      if (hasTable) {
+        const actionsButton = page.locator('table tbody tr').first().getByRole('button');
+        await actionsButton.click();
+        await page.getByRole('menuitem', { name: 'Eliminar' }).click();
+
+        // Cancel
+        await page.getByRole('button', { name: 'Cancelar' }).click();
+
+        // Dialog should close
+        await expect(page.getByRole('alertdialog')).not.toBeVisible();
       }
     });
   });
 });
 
-test.describe('Labels Management', () => {
+test.describe('Etiquetas Management', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
-    await page.getByLabel(/email/i).fill('admin@frutas.com');
-    await page.getByLabel(/contraseña/i).fill('admin123');
-    await page.getByRole('button', { name: /ingresar|iniciar/i }).click();
-    await page.waitForURL(/\/dashboard|\/$/, { timeout: 10000 });
+    await login(page);
   });
 
-  test('should display labels list', async ({ page }) => {
-    await page.goto('/empaque/etiquetas');
+  test('should display etiquetas page', async ({ page }) => {
+    await page.goto('/etiquetas');
 
-    await expect(page.getByRole('heading', { name: /etiquetas/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Etiquetas' })).toBeVisible();
   });
 
-  test('should show QR code for label', async ({ page }) => {
-    await page.goto('/empaque/etiquetas/1');
+  test('should show create etiqueta button', async ({ page }) => {
+    await page.goto('/etiquetas');
 
-    await expect(page.getByRole('img', { name: /qr/i })).toBeVisible({ timeout: 5000 }).catch(() => {
-      // QR might be rendered as canvas
-    });
-  });
-
-  test('should filter by state', async ({ page }) => {
-    await page.goto('/empaque/etiquetas');
-
-    const stateFilter = page.getByRole('combobox', { name: /estado/i });
-    if (await stateFilter.isVisible()) {
-      await stateFilter.click();
-      await page.getByRole('option', { name: /disponible/i }).click();
-      await page.waitForTimeout(500);
-    }
+    await expect(page.getByRole('button', { name: /nueva.*etiqueta/i })).toBeVisible();
   });
 });

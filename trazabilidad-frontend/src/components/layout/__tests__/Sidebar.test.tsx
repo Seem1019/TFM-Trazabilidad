@@ -55,7 +55,9 @@ describe('Sidebar', () => {
     it('should render the sidebar with logo', () => {
       renderSidebar();
 
-      expect(screen.getByText('Trazabilidad')).toBeInTheDocument();
+      // The logo text "Trazabilidad" appears in the header
+      const logoText = screen.getAllByText('Trazabilidad');
+      expect(logoText.length).toBeGreaterThanOrEqual(1);
     });
 
     it('should render all navigation groups when expanded', () => {
@@ -65,7 +67,9 @@ describe('Sidebar', () => {
       expect(screen.getByText('Producción')).toBeInTheDocument();
       expect(screen.getByText('Empaque')).toBeInTheDocument();
       expect(screen.getByText('Logística')).toBeInTheDocument();
-      expect(screen.getByText('Trazabilidad')).toBeInTheDocument();
+      // "Trazabilidad" appears both as logo and as nav group title
+      const trazabilidadElements = screen.getAllByText('Trazabilidad');
+      expect(trazabilidadElements.length).toBe(2); // Logo + nav group
       expect(screen.getByText('Administración')).toBeInTheDocument();
     });
 

@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+/test-results/.last-run.json
+/playwright-report/
+
+*webm
+/test-results/
