@@ -1,10 +1,12 @@
-package com.trazabilidad.backend;
+package com.frutas.trazabilidad;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
-class TrazabilidadBackendApplicationTests {
+@ActiveProfiles("test")
+class TrazabilidadApplicationTests {
 
     @Test
     void contextLoads() {
