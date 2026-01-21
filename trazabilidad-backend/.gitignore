@@ -12,6 +12,9 @@ target/
 .settings
 .springBeans
 .sts4-cache
+**/test-results/
+**/playwright-report/
+
 
 ### IntelliJ IDEA ###
 .idea
@@ -31,3 +34,4 @@ build/
 
 ### VS Code ###
 .vscode/
+error-context.md

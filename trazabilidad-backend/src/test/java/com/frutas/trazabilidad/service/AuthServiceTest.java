@@ -127,6 +127,7 @@ class AuthServiceTest {
         @DisplayName("Should throw UnauthorizedException when password is incorrect")
         void login_withIncorrectPassword_shouldThrowUnauthorizedException() {
             // Given
+            testUser.setIntentosFallidos(0);
             LoginRequest request = new LoginRequest("admin@frutascolombia.com", "wrongpassword");
             when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(testUser));
             when(passwordEncoder.matches(request.getPassword(), testUser.getPasswordHash())).thenReturn(false);
@@ -134,10 +135,11 @@ class AuthServiceTest {
             // When/Then
             assertThatThrownBy(() -> authService.login(request))
                     .isInstanceOf(UnauthorizedException.class)
-                    .hasMessage("Credenciales inválidas");
+                    .hasMessageContaining("Credenciales inválidas");
 
             verify(jwtUtil, never()).generateToken(any());
-            verify(userRepository, never()).save(any());
+            // Now saves because we track failed attempts
+            verify(userRepository).save(any(User.class));
         }
 
         @Test
@@ -173,6 +175,127 @@ class AuthServiceTest {
             ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
             verify(userRepository).save(userCaptor.capture());
             assertThat(userCaptor.getValue().getUltimoAcceso()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("Should reset failed attempts on successful login")
+        void login_success_shouldResetFailedAttempts() {
+            // Given
+            testUser.setIntentosFallidos(3);
+            LoginRequest request = new LoginRequest("admin@frutascolombia.com", "password123");
+            when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(testUser));
+            when(passwordEncoder.matches(request.getPassword(), testUser.getPasswordHash())).thenReturn(true);
+            when(jwtUtil.generateToken(testUser)).thenReturn("jwt-token");
+
+            // When
+            authService.login(request);
+
+            // Then
+            ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+            verify(userRepository).save(userCaptor.capture());
+            assertThat(userCaptor.getValue().getIntentosFallidos()).isEqualTo(0);
+            assertThat(userCaptor.getValue().getBloqueadoHasta()).isNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("Failed Login Attempt Lockout Tests")
+    class FailedLoginLockoutTests {
+
+        @Test
+        @DisplayName("Should increment failed attempts on wrong password")
+        void login_withWrongPassword_shouldIncrementFailedAttempts() {
+            // Given
+            testUser.setIntentosFallidos(0);
+            LoginRequest request = new LoginRequest("admin@frutascolombia.com", "wrongpassword");
+            when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(testUser));
+            when(passwordEncoder.matches(request.getPassword(), testUser.getPasswordHash())).thenReturn(false);
+
+            // When/Then
+            assertThatThrownBy(() -> authService.login(request))
+                    .isInstanceOf(UnauthorizedException.class)
+                    .hasMessageContaining("Credenciales inválidas");
+
+            ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+            verify(userRepository).save(userCaptor.capture());
+            assertThat(userCaptor.getValue().getIntentosFallidos()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("Should show remaining attempts on failed login")
+        void login_withWrongPassword_shouldShowRemainingAttempts() {
+            // Given
+            testUser.setIntentosFallidos(2);
+            LoginRequest request = new LoginRequest("admin@frutascolombia.com", "wrongpassword");
+            when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(testUser));
+            when(passwordEncoder.matches(request.getPassword(), testUser.getPasswordHash())).thenReturn(false);
+
+            // When/Then
+            assertThatThrownBy(() -> authService.login(request))
+                    .isInstanceOf(UnauthorizedException.class)
+                    .hasMessageContaining("Intentos restantes: 2");
+        }
+
+        @Test
+        @DisplayName("Should lock account after 5 failed attempts")
+        void login_afterMaxFailedAttempts_shouldLockAccount() {
+            // Given
+            testUser.setIntentosFallidos(4); // One more attempt will lock
+            LoginRequest request = new LoginRequest("admin@frutascolombia.com", "wrongpassword");
+            when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(testUser));
+            when(passwordEncoder.matches(request.getPassword(), testUser.getPasswordHash())).thenReturn(false);
+
+            // When/Then
+            assertThatThrownBy(() -> authService.login(request))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessageContaining("Cuenta bloqueada temporalmente");
+
+            ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+            verify(userRepository).save(userCaptor.capture());
+            assertThat(userCaptor.getValue().getIntentosFallidos()).isEqualTo(5);
+        }
+
+        @Test
+        @DisplayName("Should reject login when account is temporarily locked")
+        void login_whenAccountLocked_shouldThrowForbiddenException() {
+            // Given
+            testUser.setIntentosFallidos(5);
+            testUser.setBloqueadoHasta(LocalDateTime.now().plusMinutes(30));
+            LoginRequest request = new LoginRequest("admin@frutascolombia.com", "password123");
+            when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(testUser));
+
+            // When/Then
+            assertThatThrownBy(() -> authService.login(request))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessageContaining("Cuenta bloqueada temporalmente");
+
+            // Password should not even be checked when locked
+            verify(passwordEncoder, never()).matches(any(), any());
+        }
+
+        @Test
+        @DisplayName("Should allow login after lock expires")
+        void login_afterLockExpires_shouldAllowLogin() {
+            // Given - Lock expired 1 minute ago
+            testUser.setIntentosFallidos(5);
+            testUser.setBloqueadoHasta(LocalDateTime.now().minusMinutes(1));
+            LoginRequest request = new LoginRequest("admin@frutascolombia.com", "password123");
+            when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(testUser));
+            when(passwordEncoder.matches(request.getPassword(), testUser.getPasswordHash())).thenReturn(true);
+            when(jwtUtil.generateToken(testUser)).thenReturn("jwt-token");
+
+            // When
+            LoginResponse response = authService.login(request);
+
+            // Then
+            assertThat(response).isNotNull();
+            assertThat(response.getToken()).isEqualTo("jwt-token");
+
+            // Verify failed attempts were reset
+            ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+            verify(userRepository).save(userCaptor.capture());
+            assertThat(userCaptor.getValue().getIntentosFallidos()).isEqualTo(0);
+            assertThat(userCaptor.getValue().getBloqueadoHasta()).isNull();
         }
     }
 

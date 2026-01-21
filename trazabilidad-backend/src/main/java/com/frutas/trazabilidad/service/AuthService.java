@@ -38,9 +38,23 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UnauthorizedException("Credenciales inválidas"));
 
+        // Verificar bloqueo temporal por intentos fallidos
+        if (user.estaBloqueadoTemporalmente()) {
+            log.warn("Cuenta bloqueada temporalmente para usuario: {}", request.getEmail());
+            throw new ForbiddenException("Cuenta bloqueada temporalmente por múltiples intentos fallidos. Intente más tarde.");
+        }
+
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             log.warn("Contraseña incorrecta para usuario: {}", request.getEmail());
-            throw new UnauthorizedException("Credenciales inválidas");
+            user.registrarIntentoFallido();
+            userRepository.save(user);
+
+            int intentosRestantes = 5 - (user.getIntentosFallidos() != null ? user.getIntentosFallidos() : 0);
+            if (intentosRestantes > 0) {
+                throw new UnauthorizedException("Credenciales inválidas. Intentos restantes: " + intentosRestantes);
+            } else {
+                throw new ForbiddenException("Cuenta bloqueada temporalmente por múltiples intentos fallidos. Intente más tarde.");
+            }
         }
 
         if (!user.getActivo()) {
@@ -48,6 +62,8 @@ public class AuthService {
             throw new ForbiddenException("Usuario inactivo. Contacte al administrador");
         }
 
+        // Login exitoso: reiniciar intentos fallidos
+        user.reiniciarIntentosFallidos();
         user.setUltimoAcceso(LocalDateTime.now());
         userRepository.save(user);
 

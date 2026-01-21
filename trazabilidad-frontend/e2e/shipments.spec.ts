@@ -242,7 +242,7 @@ test.describe('Shipment Management', () => {
       if (await closeButton.isVisible()) {
         // Should be disabled or show error when clicked
         await closeButton.click();
-        await expect(page.getByText(/al menos.*pallet|requiere.*pallet/i)).toBeVisible({ timeout: 5000 }).catch(() => {
+        await expect(page.getByText(/al menos.*pallet|requiere.*pallet/i)).toBeVisible({ timeout: 5000 }).catch(async () => {
           expect(await closeButton.isDisabled()).toBeTruthy();
         });
       }

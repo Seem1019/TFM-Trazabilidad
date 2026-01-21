@@ -64,6 +64,50 @@ public class User implements UserDetails {
     @Column(name = "ultimo_acceso")
     private LocalDateTime ultimoAcceso;
 
+    @Column(name = "intentos_fallidos")
+    @Builder.Default
+    private Integer intentosFallidos = 0;
+
+    @Column(name = "bloqueado_hasta")
+    private LocalDateTime bloqueadoHasta;
+
+    private static final int MAX_INTENTOS_FALLIDOS = 5;
+    private static final int MINUTOS_BLOQUEO = 30;
+
+    /**
+     * Incrementa los intentos fallidos y bloquea la cuenta si excede el máximo.
+     */
+    public void registrarIntentoFallido() {
+        this.intentosFallidos = (this.intentosFallidos == null ? 0 : this.intentosFallidos) + 1;
+        if (this.intentosFallidos >= MAX_INTENTOS_FALLIDOS) {
+            this.bloqueadoHasta = LocalDateTime.now().plusMinutes(MINUTOS_BLOQUEO);
+        }
+    }
+
+    /**
+     * Reinicia los intentos fallidos después de un login exitoso.
+     */
+    public void reiniciarIntentosFallidos() {
+        this.intentosFallidos = 0;
+        this.bloqueadoHasta = null;
+    }
+
+    /**
+     * Verifica si la cuenta está temporalmente bloqueada.
+     */
+    public boolean estaBloqueadoTemporalmente() {
+        if (this.bloqueadoHasta == null) {
+            return false;
+        }
+        if (LocalDateTime.now().isAfter(this.bloqueadoHasta)) {
+            // El bloqueo expiró, reiniciar
+            this.bloqueadoHasta = null;
+            this.intentosFallidos = 0;
+            return false;
+        }
+        return true;
+    }
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
