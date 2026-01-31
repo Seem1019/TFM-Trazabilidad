@@ -1,10 +1,8 @@
 package com.frutas.trazabilidad.service;
 
-import com.frutas.trazabilidad.dto.LoginRequest;
-import com.frutas.trazabilidad.dto.LoginResponse;
-import com.frutas.trazabilidad.dto.PasswordResetConfirmRequest;
-import com.frutas.trazabilidad.dto.PasswordResetRequest;
+import com.frutas.trazabilidad.dto.*;
 import com.frutas.trazabilidad.entity.PasswordResetToken;
+import com.frutas.trazabilidad.entity.RefreshToken;
 import com.frutas.trazabilidad.entity.User;
 import com.frutas.trazabilidad.exception.ForbiddenException;
 import com.frutas.trazabilidad.exception.ResourceNotFoundException;
@@ -30,9 +28,21 @@ public class AuthService {
     private final PasswordResetTokenRepository resetTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final RefreshTokenService refreshTokenService;
 
+    /**
+     * Autentica un usuario y genera access + refresh tokens.
+     */
     @Transactional
     public LoginResponse login(LoginRequest request) {
+        return login(request, null, null);
+    }
+
+    /**
+     * Autentica un usuario con información del dispositivo.
+     */
+    @Transactional
+    public LoginResponse login(LoginRequest request, String deviceInfo, String ipAddress) {
         log.debug("Intento de login para email: {}", request.getEmail());
 
         User user = userRepository.findByEmail(request.getEmail())
@@ -67,12 +77,17 @@ public class AuthService {
         user.setUltimoAcceso(LocalDateTime.now());
         userRepository.save(user);
 
-        String token = jwtUtil.generateToken(user);
+        // Generar tokens
+        String accessToken = jwtUtil.generateAccessToken(user);
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user, deviceInfo, ipAddress);
 
         log.info("Login exitoso para usuario: {} - Empresa: {}", user.getEmail(), user.getEmpresa().getRazonSocial());
 
         return LoginResponse.builder()
-                .token(token)
+                .accessToken(accessToken)
+                .refreshToken(refreshToken.getToken())
+                .tokenType("Bearer")
+                .expiresIn(jwtUtil.getAccessTokenExpirationSeconds())
                 .user(LoginResponse.UserInfo.builder()
                         .id(user.getId())
                         .email(user.getEmail())
@@ -83,6 +98,63 @@ public class AuthService {
                         .empresaNombre(user.getEmpresa().getRazonSocial())
                         .build())
                 .build();
+    }
+
+    /**
+     * Renueva el access token usando el refresh token.
+     */
+    @Transactional
+    public TokenRefreshResponse refreshToken(TokenRefreshRequest request, String deviceInfo, String ipAddress) {
+        log.debug("Solicitud de refresh token");
+
+        // Validar refresh token
+        RefreshToken refreshToken = refreshTokenService.validateRefreshToken(request.getRefreshToken());
+        User user = refreshToken.getUser();
+
+        // Verificar que el usuario sigue activo
+        if (!user.getActivo()) {
+            log.warn("Intento de refresh con usuario inactivo: {}", user.getEmail());
+            refreshTokenService.revokeAllUserTokens(user.getId());
+            throw new ForbiddenException("Usuario inactivo. Sesión terminada.");
+        }
+
+        // Verificar bloqueo temporal
+        if (user.estaBloqueadoTemporalmente()) {
+            log.warn("Intento de refresh con cuenta bloqueada: {}", user.getEmail());
+            throw new ForbiddenException("Cuenta bloqueada temporalmente.");
+        }
+
+        // Generar nuevo access token
+        String newAccessToken = jwtUtil.generateAccessToken(user);
+
+        // Rotar refresh token (seguridad adicional)
+        RefreshToken newRefreshToken = refreshTokenService.rotateRefreshToken(refreshToken, deviceInfo, ipAddress);
+
+        log.debug("Token renovado para usuario: {}", user.getEmail());
+
+        return TokenRefreshResponse.of(
+                newAccessToken,
+                newRefreshToken.getToken(),
+                jwtUtil.getAccessTokenExpirationSeconds()
+        );
+    }
+
+    /**
+     * Cierra sesión revocando el refresh token.
+     */
+    @Transactional
+    public void logout(String refreshToken) {
+        refreshTokenService.revokeToken(refreshToken);
+        log.debug("Logout ejecutado");
+    }
+
+    /**
+     * Cierra todas las sesiones del usuario.
+     */
+    @Transactional
+    public void logoutAll(Long userId) {
+        refreshTokenService.revokeAllUserTokens(userId);
+        log.info("Logout global ejecutado para usuario ID: {}", userId);
     }
 
     /**
@@ -151,6 +223,9 @@ public class AuthService {
         // Marcar token como usado
         resetToken.setUsed(true);
         resetTokenRepository.save(resetToken);
+
+        // Revocar todos los refresh tokens (forzar re-login)
+        refreshTokenService.revokeAllUserTokens(user.getId());
 
         log.info("Contraseña actualizada exitosamente para usuario: {}", user.getEmail());
     }

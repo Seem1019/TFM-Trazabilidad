@@ -1,5 +1,6 @@
 package com.frutas.trazabilidad.module.empaque.entity;
 
+import com.frutas.trazabilidad.entity.Empresa;
 import com.frutas.trazabilidad.module.logistica.entity.Envio;
 import jakarta.persistence.*;
 import lombok.*;
@@ -10,9 +11,12 @@ import java.util.List;
 
 /**
  * Entidad que representa un pallet (agrupación de cajas/etiquetas).
+ * Tiene relación directa con Empresa para facilitar el filtrado multitenant.
  */
 @Entity
-@Table(name = "pallets")
+@Table(name = "pallets", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"codigo_pallet", "empresa_id"})
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,8 +28,15 @@ public class Pallet {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "codigo_pallet", nullable = false, unique = true, length = 50)
+    @Column(name = "codigo_pallet", nullable = false, length = 50)
     private String codigoPallet; // Ej: PLT-2024-00001
+
+    /**
+     * Empresa a la que pertenece el pallet (para aislamiento multitenant).
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "empresa_id", nullable = false)
+    private Empresa empresa;
 
     @Column(name = "fecha_paletizado", nullable = false)
     private LocalDate fechaPaletizado;

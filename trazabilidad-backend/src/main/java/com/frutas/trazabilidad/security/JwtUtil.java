@@ -12,7 +12,7 @@ import java.util.Date;
 
 /**
  * Utilidad para generación y validación de tokens JWT.
- * Usa la librería Auth0 java-jwt.
+ * Soporta access tokens (corta duración) y refresh tokens (larga duración).
  */
 @Component
 public class JwtUtil {
@@ -20,34 +20,59 @@ public class JwtUtil {
     @Value("${spring.security.jwt.secret}")
     private String secret;
 
-    @Value("${spring.security.jwt.expiration}")
-    private Long expiration;
+    @Value("${spring.security.jwt.access-token-expiration:900000}") // 15 minutos por defecto
+    private Long accessTokenExpiration;
+
+    @Value("${spring.security.jwt.refresh-token-expiration:604800000}") // 7 días por defecto
+    private Long refreshTokenExpiration;
+
+    private static final String TOKEN_TYPE_CLAIM = "tokenType";
+    private static final String ACCESS_TOKEN_TYPE = "ACCESS";
 
     /**
-     * Genera un token JWT para un usuario.
+     * Genera un access token JWT para un usuario.
+     * Duración corta (15 minutos por defecto).
      */
-    public String generateToken(User user) {
+    public String generateAccessToken(User user) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + expiration);
+        Date expiryDate = new Date(now.getTime() + accessTokenExpiration);
 
         return JWT.create()
                 .withSubject(user.getEmail())
                 .withClaim("userId", user.getId())
                 .withClaim("empresaId", user.getEmpresa().getId())
                 .withClaim("rol", user.getRol().name())
+                .withClaim(TOKEN_TYPE_CLAIM, ACCESS_TOKEN_TYPE)
                 .withIssuedAt(now)
                 .withExpiresAt(expiryDate)
                 .sign(Algorithm.HMAC256(secret));
     }
 
     /**
+     * @deprecated Use generateAccessToken instead
+     * Mantiene compatibilidad con código existente.
+     */
+    @Deprecated
+    public String generateToken(User user) {
+        return generateAccessToken(user);
+    }
+
+    /**
      * Valida un token JWT y retorna el email del usuario.
+     * Verifica firma, expiración y tipo de token.
      */
     public String validateTokenAndGetEmail(String token) {
         try {
             DecodedJWT jwt = JWT.require(Algorithm.HMAC256(secret))
                     .build()
                     .verify(token);
+
+            // Verificar que es un access token (no refresh token)
+            String tokenType = jwt.getClaim(TOKEN_TYPE_CLAIM).asString();
+            if (tokenType != null && !ACCESS_TOKEN_TYPE.equals(tokenType)) {
+                throw new RuntimeException("Tipo de token inválido");
+            }
+
             return jwt.getSubject();
         } catch (JWTVerificationException e) {
             throw new RuntimeException("Token JWT inválido o expirado", e);
@@ -100,6 +125,48 @@ public class JwtUtil {
             return jwt.getClaim("userId").asLong();
         } catch (Exception e) {
             throw new RuntimeException("No se pudo extraer userId del token", e);
+        }
+    }
+
+    /**
+     * Extrae el rol del token.
+     */
+    public String extractRol(String token) {
+        try {
+            DecodedJWT jwt = JWT.decode(token);
+            return jwt.getClaim("rol").asString();
+        } catch (Exception e) {
+            throw new RuntimeException("No se pudo extraer rol del token", e);
+        }
+    }
+
+    /**
+     * Obtiene el tiempo de expiración del access token en segundos.
+     */
+    public long getAccessTokenExpirationSeconds() {
+        return accessTokenExpiration / 1000;
+    }
+
+    /**
+     * Obtiene el tiempo de expiración del refresh token en milisegundos.
+     */
+    public long getRefreshTokenExpirationMs() {
+        return refreshTokenExpiration;
+    }
+
+    /**
+     * Valida la firma del token sin verificar expiración.
+     * Útil para refresh tokens donde queremos verificar autenticidad.
+     */
+    public boolean isTokenSignatureValid(String token) {
+        try {
+            JWT.require(Algorithm.HMAC256(secret))
+                    .acceptExpiresAt(Long.MAX_VALUE / 1000) // Ignora expiración
+                    .build()
+                    .verify(token);
+            return true;
+        } catch (JWTVerificationException e) {
+            return false;
         }
     }
 }

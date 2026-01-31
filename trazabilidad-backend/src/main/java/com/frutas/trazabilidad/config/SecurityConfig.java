@@ -1,6 +1,7 @@
 package com.frutas.trazabilidad.config;
 
 import com.frutas.trazabilidad.security.JwtAuthFilter;
+import com.frutas.trazabilidad.security.RateLimitingFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,6 +20,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 /**
  * Configuración de seguridad de Spring Security.
  * Define qué endpoints requieren autenticación y configura JWT.
+ * Incluye Rate Limiting para protección contra DoS.
  */
 @Configuration
 @EnableWebSecurity
@@ -27,6 +29,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final RateLimitingFilter rateLimitingFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -53,6 +56,9 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
+                // Rate limiting primero (antes de todo)
+                .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
+                // JWT después del rate limiting
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

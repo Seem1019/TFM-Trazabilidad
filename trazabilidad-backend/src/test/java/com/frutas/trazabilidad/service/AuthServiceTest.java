@@ -4,8 +4,11 @@ import com.frutas.trazabilidad.dto.LoginRequest;
 import com.frutas.trazabilidad.dto.LoginResponse;
 import com.frutas.trazabilidad.dto.PasswordResetConfirmRequest;
 import com.frutas.trazabilidad.dto.PasswordResetRequest;
+import com.frutas.trazabilidad.dto.TokenRefreshRequest;
+import com.frutas.trazabilidad.dto.TokenRefreshResponse;
 import com.frutas.trazabilidad.entity.Empresa;
 import com.frutas.trazabilidad.entity.PasswordResetToken;
+import com.frutas.trazabilidad.entity.RefreshToken;
 import com.frutas.trazabilidad.entity.TipoRol;
 import com.frutas.trazabilidad.entity.User;
 import com.frutas.trazabilidad.exception.ForbiddenException;
@@ -25,12 +28,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
@@ -52,11 +58,15 @@ class AuthServiceTest {
     @Mock
     private JwtUtil jwtUtil;
 
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
     @InjectMocks
     private AuthService authService;
 
     private User testUser;
     private Empresa testEmpresa;
+    private RefreshToken testRefreshToken;
 
     @BeforeEach
     void setUp() {
@@ -78,6 +88,14 @@ class AuthServiceTest {
                 .rol(TipoRol.ADMIN)
                 .activo(true)
                 .build();
+
+        testRefreshToken = RefreshToken.builder()
+                .id(1L)
+                .token("refresh-token-123")
+                .user(testUser)
+                .expiryDate(Instant.now().plus(7, ChronoUnit.DAYS))
+                .revoked(false)
+                .build();
     }
 
     @Nested
@@ -91,14 +109,19 @@ class AuthServiceTest {
             LoginRequest request = new LoginRequest("admin@frutascolombia.com", "password123");
             when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(testUser));
             when(passwordEncoder.matches(request.getPassword(), testUser.getPasswordHash())).thenReturn(true);
-            when(jwtUtil.generateToken(testUser)).thenReturn("jwt-token-123");
+            when(jwtUtil.generateAccessToken(testUser)).thenReturn("jwt-access-token-123");
+            when(jwtUtil.getAccessTokenExpirationSeconds()).thenReturn(900L);
+            when(refreshTokenService.createRefreshToken(eq(testUser), any(), any())).thenReturn(testRefreshToken);
 
             // When
             LoginResponse response = authService.login(request);
 
             // Then
             assertThat(response).isNotNull();
-            assertThat(response.getToken()).isEqualTo("jwt-token-123");
+            assertThat(response.getAccessToken()).isEqualTo("jwt-access-token-123");
+            assertThat(response.getRefreshToken()).isEqualTo("refresh-token-123");
+            assertThat(response.getTokenType()).isEqualTo("Bearer");
+            assertThat(response.getExpiresIn()).isEqualTo(900L);
             assertThat(response.getUser()).isNotNull();
             assertThat(response.getUser().getEmail()).isEqualTo("admin@frutascolombia.com");
             assertThat(response.getUser().getNombre()).isEqualTo("Juan");
@@ -120,7 +143,7 @@ class AuthServiceTest {
                     .isInstanceOf(UnauthorizedException.class)
                     .hasMessage("Credenciales inválidas");
 
-            verify(jwtUtil, never()).generateToken(any());
+            verify(jwtUtil, never()).generateAccessToken(any());
         }
 
         @Test
@@ -137,7 +160,7 @@ class AuthServiceTest {
                     .isInstanceOf(UnauthorizedException.class)
                     .hasMessageContaining("Credenciales inválidas");
 
-            verify(jwtUtil, never()).generateToken(any());
+            verify(jwtUtil, never()).generateAccessToken(any());
             // Now saves because we track failed attempts
             verify(userRepository).save(any(User.class));
         }
@@ -156,7 +179,7 @@ class AuthServiceTest {
                     .isInstanceOf(ForbiddenException.class)
                     .hasMessage("Usuario inactivo. Contacte al administrador");
 
-            verify(jwtUtil, never()).generateToken(any());
+            verify(jwtUtil, never()).generateAccessToken(any());
         }
 
         @Test
@@ -166,7 +189,9 @@ class AuthServiceTest {
             LoginRequest request = new LoginRequest("admin@frutascolombia.com", "password123");
             when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(testUser));
             when(passwordEncoder.matches(request.getPassword(), testUser.getPasswordHash())).thenReturn(true);
-            when(jwtUtil.generateToken(testUser)).thenReturn("jwt-token");
+            when(jwtUtil.generateAccessToken(testUser)).thenReturn("jwt-token");
+            when(jwtUtil.getAccessTokenExpirationSeconds()).thenReturn(900L);
+            when(refreshTokenService.createRefreshToken(eq(testUser), any(), any())).thenReturn(testRefreshToken);
 
             // When
             authService.login(request);
@@ -185,7 +210,9 @@ class AuthServiceTest {
             LoginRequest request = new LoginRequest("admin@frutascolombia.com", "password123");
             when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(testUser));
             when(passwordEncoder.matches(request.getPassword(), testUser.getPasswordHash())).thenReturn(true);
-            when(jwtUtil.generateToken(testUser)).thenReturn("jwt-token");
+            when(jwtUtil.generateAccessToken(testUser)).thenReturn("jwt-token");
+            when(jwtUtil.getAccessTokenExpirationSeconds()).thenReturn(900L);
+            when(refreshTokenService.createRefreshToken(eq(testUser), any(), any())).thenReturn(testRefreshToken);
 
             // When
             authService.login(request);
@@ -282,20 +309,106 @@ class AuthServiceTest {
             LoginRequest request = new LoginRequest("admin@frutascolombia.com", "password123");
             when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(testUser));
             when(passwordEncoder.matches(request.getPassword(), testUser.getPasswordHash())).thenReturn(true);
-            when(jwtUtil.generateToken(testUser)).thenReturn("jwt-token");
+            when(jwtUtil.generateAccessToken(testUser)).thenReturn("jwt-token");
+            when(jwtUtil.getAccessTokenExpirationSeconds()).thenReturn(900L);
+            when(refreshTokenService.createRefreshToken(eq(testUser), any(), any())).thenReturn(testRefreshToken);
 
             // When
             LoginResponse response = authService.login(request);
 
             // Then
             assertThat(response).isNotNull();
-            assertThat(response.getToken()).isEqualTo("jwt-token");
+            assertThat(response.getAccessToken()).isEqualTo("jwt-token");
 
             // Verify failed attempts were reset
             ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
             verify(userRepository).save(userCaptor.capture());
             assertThat(userCaptor.getValue().getIntentosFallidos()).isEqualTo(0);
             assertThat(userCaptor.getValue().getBloqueadoHasta()).isNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("Refresh Token Tests")
+    class RefreshTokenTests {
+
+        @Test
+        @DisplayName("Should refresh token successfully")
+        void refreshToken_withValidToken_shouldReturnNewTokens() {
+            // Given
+            TokenRefreshRequest request = new TokenRefreshRequest("refresh-token-123");
+            RefreshToken newRefreshToken = RefreshToken.builder()
+                    .token("new-refresh-token")
+                    .user(testUser)
+                    .build();
+
+            when(refreshTokenService.validateRefreshToken("refresh-token-123")).thenReturn(testRefreshToken);
+            when(jwtUtil.generateAccessToken(testUser)).thenReturn("new-access-token");
+            when(jwtUtil.getAccessTokenExpirationSeconds()).thenReturn(900L);
+            when(refreshTokenService.rotateRefreshToken(eq(testRefreshToken), any(), any())).thenReturn(newRefreshToken);
+
+            // When
+            TokenRefreshResponse response = authService.refreshToken(request, null, null);
+
+            // Then
+            assertThat(response).isNotNull();
+            assertThat(response.getAccessToken()).isEqualTo("new-access-token");
+            assertThat(response.getRefreshToken()).isEqualTo("new-refresh-token");
+        }
+
+        @Test
+        @DisplayName("Should throw ForbiddenException when user is inactive during refresh")
+        void refreshToken_withInactiveUser_shouldThrowForbiddenException() {
+            // Given
+            testUser.setActivo(false);
+            TokenRefreshRequest request = new TokenRefreshRequest("refresh-token-123");
+            when(refreshTokenService.validateRefreshToken("refresh-token-123")).thenReturn(testRefreshToken);
+
+            // When/Then
+            assertThatThrownBy(() -> authService.refreshToken(request, null, null))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessage("Usuario inactivo. Sesión terminada.");
+
+            verify(refreshTokenService).revokeAllUserTokens(testUser.getId());
+        }
+
+        @Test
+        @DisplayName("Should throw ForbiddenException when user is blocked during refresh")
+        void refreshToken_withBlockedUser_shouldThrowForbiddenException() {
+            // Given
+            testUser.setBloqueadoHasta(LocalDateTime.now().plusMinutes(30));
+            TokenRefreshRequest request = new TokenRefreshRequest("refresh-token-123");
+            when(refreshTokenService.validateRefreshToken("refresh-token-123")).thenReturn(testRefreshToken);
+
+            // When/Then
+            assertThatThrownBy(() -> authService.refreshToken(request, null, null))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessage("Cuenta bloqueada temporalmente.");
+        }
+    }
+
+    @Nested
+    @DisplayName("Logout Tests")
+    class LogoutTests {
+
+        @Test
+        @DisplayName("Should logout by revoking refresh token")
+        void logout_shouldRevokeToken() {
+            // When
+            authService.logout("refresh-token-123");
+
+            // Then
+            verify(refreshTokenService).revokeToken("refresh-token-123");
+        }
+
+        @Test
+        @DisplayName("Should logout all sessions by revoking all user tokens")
+        void logoutAll_shouldRevokeAllUserTokens() {
+            // When
+            authService.logoutAll(1L);
+
+            // Then
+            verify(refreshTokenService).revokeAllUserTokens(1L);
         }
     }
 
@@ -428,6 +541,7 @@ class AuthServiceTest {
             // Then
             verify(userRepository).save(any(User.class));
             verify(resetTokenRepository).save(any(PasswordResetToken.class));
+            verify(refreshTokenService).revokeAllUserTokens(testUser.getId());
             assertThat(validToken.getUsed()).isTrue();
         }
 
@@ -525,6 +639,24 @@ class AuthServiceTest {
             ArgumentCaptor<PasswordResetToken> tokenCaptor = ArgumentCaptor.forClass(PasswordResetToken.class);
             verify(resetTokenRepository).save(tokenCaptor.capture());
             assertThat(tokenCaptor.getValue().getUsed()).isTrue();
+        }
+
+        @Test
+        @DisplayName("Should revoke all refresh tokens after password reset")
+        void confirmPasswordReset_shouldRevokeAllRefreshTokens() {
+            // Given
+            PasswordResetConfirmRequest request = new PasswordResetConfirmRequest();
+            request.setToken("valid-token-123");
+            request.setNewPassword("newPassword");
+
+            when(resetTokenRepository.findByToken(request.getToken())).thenReturn(Optional.of(validToken));
+            when(passwordEncoder.encode(anyString())).thenReturn("hashedPassword");
+
+            // When
+            authService.confirmPasswordReset(request);
+
+            // Then
+            verify(refreshTokenService).revokeAllUserTokens(testUser.getId());
         }
     }
 }

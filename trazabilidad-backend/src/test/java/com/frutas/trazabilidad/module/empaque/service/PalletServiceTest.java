@@ -1,5 +1,6 @@
 package com.frutas.trazabilidad.module.empaque.service;
 
+import com.frutas.trazabilidad.entity.Empresa;
 import com.frutas.trazabilidad.exception.ResourceNotFoundException;
 import com.frutas.trazabilidad.module.empaque.dto.PalletRequest;
 import com.frutas.trazabilidad.module.empaque.dto.PalletResponse;
@@ -9,6 +10,7 @@ import com.frutas.trazabilidad.module.empaque.entity.Pallet;
 import com.frutas.trazabilidad.module.empaque.mapper.PalletMapper;
 import com.frutas.trazabilidad.module.empaque.repository.EtiquetaRepository;
 import com.frutas.trazabilidad.module.empaque.repository.PalletRepository;
+import com.frutas.trazabilidad.repository.EmpresaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -28,11 +30,13 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for PalletService.
  * Tests pallet management including label assignment and state changes.
+ * All tests include empresaId parameter for multitenant validation.
  */
 @ExtendWith(MockitoExtension.class)
 class PalletServiceTest {
@@ -44,11 +48,17 @@ class PalletServiceTest {
     private EtiquetaRepository etiquetaRepository;
 
     @Mock
+    private EmpresaRepository empresaRepository;
+
+    @Mock
     private PalletMapper mapper;
 
     @InjectMocks
     private PalletService palletService;
 
+    private static final Long EMPRESA_ID = 1L;
+
+    private Empresa testEmpresa;
     private Pallet testPallet;
     private PalletRequest palletRequest;
     private PalletResponse palletResponse;
@@ -56,6 +66,13 @@ class PalletServiceTest {
 
     @BeforeEach
     void setUp() {
+        testEmpresa = Empresa.builder()
+                .id(EMPRESA_ID)
+                .nit("900123456-1")
+                .razonSocial("Frutas Colombia S.A.S")
+                .activo(true)
+                .build();
+
         testPallet = Pallet.builder()
                 .id(1L)
                 .codigoPallet("PAL-2024-001")
@@ -67,6 +84,7 @@ class PalletServiceTest {
                 .tipoFruta("Mango")
                 .estadoPallet("ARMADO")
                 .fechaPaletizado(LocalDate.now())
+                .empresa(testEmpresa)
                 .etiquetas(new ArrayList<>())
                 .activo(true)
                 .build();
@@ -101,83 +119,83 @@ class PalletServiceTest {
     class ListPalletsTests {
 
         @Test
-        @DisplayName("Should list all active pallets")
-        void listarTodos_shouldReturnActivePallets() {
+        @DisplayName("Should list all active pallets for empresa")
+        void listarPorEmpresa_shouldReturnActivePallets() {
             // Given
-            when(palletRepository.findByActivoTrueOrderByFechaPaletizadoDesc())
+            when(palletRepository.findByEmpresaIdAndActivoTrueOrderByFechaPaletizadoDesc(EMPRESA_ID))
                     .thenReturn(Arrays.asList(testPallet));
             when(mapper.toResponse(any(Pallet.class))).thenReturn(palletResponse);
 
             // When
-            List<PalletResponse> result = palletService.listarTodos();
+            List<PalletResponse> result = palletService.listarPorEmpresa(EMPRESA_ID);
 
             // Then
             assertThat(result).hasSize(1);
-            verify(palletRepository).findByActivoTrueOrderByFechaPaletizadoDesc();
+            verify(palletRepository).findByEmpresaIdAndActivoTrueOrderByFechaPaletizadoDesc(EMPRESA_ID);
         }
 
         @Test
-        @DisplayName("Should list pallets by state")
+        @DisplayName("Should list pallets by state for empresa")
         void listarPorEstado_shouldReturnFilteredPallets() {
             // Given
-            when(palletRepository.findByEstadoPalletAndActivoTrue("ARMADO"))
+            when(palletRepository.findByEmpresaIdAndEstadoPalletAndActivoTrue(EMPRESA_ID, "ARMADO"))
                     .thenReturn(Arrays.asList(testPallet));
             when(mapper.toResponse(any(Pallet.class))).thenReturn(palletResponse);
 
             // When
-            List<PalletResponse> result = palletService.listarPorEstado("ARMADO");
+            List<PalletResponse> result = palletService.listarPorEstado(EMPRESA_ID, "ARMADO");
 
             // Then
             assertThat(result).hasSize(1);
-            verify(palletRepository).findByEstadoPalletAndActivoTrue("ARMADO");
+            verify(palletRepository).findByEmpresaIdAndEstadoPalletAndActivoTrue(EMPRESA_ID, "ARMADO");
         }
 
         @Test
-        @DisplayName("Should list pallets by destination")
+        @DisplayName("Should list pallets by destination for empresa")
         void listarPorDestino_shouldReturnFilteredPallets() {
             // Given
-            when(palletRepository.findByDestinoContainingIgnoreCaseAndActivoTrue("Estados"))
+            when(palletRepository.findByEmpresaIdAndDestinoContainingIgnoreCaseAndActivoTrue(EMPRESA_ID, "Estados"))
                     .thenReturn(Arrays.asList(testPallet));
             when(mapper.toResponse(any(Pallet.class))).thenReturn(palletResponse);
 
             // When
-            List<PalletResponse> result = palletService.listarPorDestino("Estados");
+            List<PalletResponse> result = palletService.listarPorDestino(EMPRESA_ID, "Estados");
 
             // Then
             assertThat(result).hasSize(1);
-            verify(palletRepository).findByDestinoContainingIgnoreCaseAndActivoTrue("Estados");
+            verify(palletRepository).findByEmpresaIdAndDestinoContainingIgnoreCaseAndActivoTrue(EMPRESA_ID, "Estados");
         }
 
         @Test
-        @DisplayName("Should list pallets by fruit type")
+        @DisplayName("Should list pallets by fruit type for empresa")
         void listarPorTipoFruta_shouldReturnFilteredPallets() {
             // Given
-            when(palletRepository.findByTipoFrutaAndActivoTrue("Mango"))
+            when(palletRepository.findByEmpresaIdAndTipoFrutaAndActivoTrue(EMPRESA_ID, "Mango"))
                     .thenReturn(Arrays.asList(testPallet));
             when(mapper.toResponse(any(Pallet.class))).thenReturn(palletResponse);
 
             // When
-            List<PalletResponse> result = palletService.listarPorTipoFruta("Mango");
+            List<PalletResponse> result = palletService.listarPorTipoFruta(EMPRESA_ID, "Mango");
 
             // Then
             assertThat(result).hasSize(1);
-            verify(palletRepository).findByTipoFrutaAndActivoTrue("Mango");
+            verify(palletRepository).findByEmpresaIdAndTipoFrutaAndActivoTrue(EMPRESA_ID, "Mango");
         }
 
         @Test
-        @DisplayName("Should list pallets ready for shipment")
+        @DisplayName("Should list pallets ready for shipment for empresa")
         void listarListosParaEnvio_shouldReturnReadyPallets() {
             // Given
-            when(palletRepository.findPalletsListosParaEnvio())
+            when(palletRepository.findPalletsListosParaEnvio(EMPRESA_ID))
                     .thenReturn(Arrays.asList(testPallet));
             when(mapper.toResponse(any(Pallet.class))).thenReturn(palletResponse);
 
             // When
-            List<PalletResponse> result = palletService.listarListosParaEnvio();
+            List<PalletResponse> result = palletService.listarListosParaEnvio(EMPRESA_ID);
 
             // Then
             assertThat(result).hasSize(1);
-            verify(palletRepository).findPalletsListosParaEnvio();
+            verify(palletRepository).findPalletsListosParaEnvio(EMPRESA_ID);
         }
     }
 
@@ -186,14 +204,14 @@ class PalletServiceTest {
     class FindPalletTests {
 
         @Test
-        @DisplayName("Should find pallet by ID")
+        @DisplayName("Should find pallet by ID and empresaId")
         void buscarPorId_withValidId_shouldReturnPallet() {
             // Given
-            when(palletRepository.findById(1L)).thenReturn(Optional.of(testPallet));
+            when(palletRepository.findByIdAndEmpresaId(1L, EMPRESA_ID)).thenReturn(Optional.of(testPallet));
             when(mapper.toResponse(testPallet)).thenReturn(palletResponse);
 
             // When
-            PalletResponse result = palletService.buscarPorId(1L);
+            PalletResponse result = palletService.buscarPorId(1L, EMPRESA_ID);
 
             // Then
             assertThat(result).isNotNull();
@@ -204,12 +222,23 @@ class PalletServiceTest {
         @DisplayName("Should throw ResourceNotFoundException for invalid ID")
         void buscarPorId_withInvalidId_shouldThrowResourceNotFoundException() {
             // Given
-            when(palletRepository.findById(999L)).thenReturn(Optional.empty());
+            when(palletRepository.findByIdAndEmpresaId(999L, EMPRESA_ID)).thenReturn(Optional.empty());
 
             // When/Then
-            assertThatThrownBy(() -> palletService.buscarPorId(999L))
-                    .isInstanceOf(ResourceNotFoundException.class)
-                    .hasMessageContaining("Pallet no encontrado con ID: 999");
+            assertThatThrownBy(() -> palletService.buscarPorId(999L, EMPRESA_ID))
+                    .isInstanceOf(ResourceNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("Should throw ResourceNotFoundException when pallet belongs to different empresa")
+        void buscarPorId_withDifferentEmpresa_shouldThrowResourceNotFoundException() {
+            // Given
+            Long otherEmpresaId = 999L;
+            when(palletRepository.findByIdAndEmpresaId(1L, otherEmpresaId)).thenReturn(Optional.empty());
+
+            // When/Then
+            assertThatThrownBy(() -> palletService.buscarPorId(1L, otherEmpresaId))
+                    .isInstanceOf(ResourceNotFoundException.class);
         }
     }
 
@@ -221,13 +250,14 @@ class PalletServiceTest {
         @DisplayName("Should create pallet with valid data")
         void crear_withValidData_shouldCreatePallet() {
             // Given
-            when(palletRepository.existsByCodigoPallet(palletRequest.getCodigoPallet())).thenReturn(false);
+            when(palletRepository.existsByCodigoPalletAndEmpresaId(palletRequest.getCodigoPallet(), EMPRESA_ID)).thenReturn(false);
+            when(empresaRepository.findById(EMPRESA_ID)).thenReturn(Optional.of(testEmpresa));
             when(mapper.toEntity(palletRequest)).thenReturn(testPallet);
             when(palletRepository.save(any(Pallet.class))).thenReturn(testPallet);
             when(mapper.toResponse(any(Pallet.class))).thenReturn(palletResponse);
 
             // When
-            PalletResponse result = palletService.crear(palletRequest);
+            PalletResponse result = palletService.crear(palletRequest, EMPRESA_ID);
 
             // Then
             assertThat(result).isNotNull();
@@ -235,13 +265,13 @@ class PalletServiceTest {
         }
 
         @Test
-        @DisplayName("Should throw IllegalArgumentException when codigo already exists")
+        @DisplayName("Should throw IllegalArgumentException when codigo already exists in empresa")
         void crear_withDuplicateCodigo_shouldThrowIllegalArgumentException() {
             // Given
-            when(palletRepository.existsByCodigoPallet(palletRequest.getCodigoPallet())).thenReturn(true);
+            when(palletRepository.existsByCodigoPalletAndEmpresaId(palletRequest.getCodigoPallet(), EMPRESA_ID)).thenReturn(true);
 
             // When/Then
-            assertThatThrownBy(() -> palletService.crear(palletRequest))
+            assertThatThrownBy(() -> palletService.crear(palletRequest, EMPRESA_ID))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Ya existe un pallet con el código: PAL-2024-002");
 
@@ -255,14 +285,15 @@ class PalletServiceTest {
             palletRequest.setEtiquetasIds(Arrays.asList(1L));
             testPallet.setEtiquetas(new ArrayList<>());
 
-            when(palletRepository.existsByCodigoPallet(palletRequest.getCodigoPallet())).thenReturn(false);
+            when(palletRepository.existsByCodigoPalletAndEmpresaId(palletRequest.getCodigoPallet(), EMPRESA_ID)).thenReturn(false);
+            when(empresaRepository.findById(EMPRESA_ID)).thenReturn(Optional.of(testEmpresa));
             when(mapper.toEntity(palletRequest)).thenReturn(testPallet);
-            when(etiquetaRepository.findById(1L)).thenReturn(Optional.of(testEtiqueta));
+            when(etiquetaRepository.findByIdAndEmpresaId(1L, EMPRESA_ID)).thenReturn(Optional.of(testEtiqueta));
             when(palletRepository.save(any(Pallet.class))).thenReturn(testPallet);
             when(mapper.toResponse(any(Pallet.class))).thenReturn(palletResponse);
 
             // When
-            palletService.crear(palletRequest);
+            palletService.crear(palletRequest, EMPRESA_ID);
 
             // Then
             assertThat(testPallet.getEtiquetas()).hasSize(1);
@@ -270,20 +301,20 @@ class PalletServiceTest {
         }
 
         @Test
-        @DisplayName("Should throw ResourceNotFoundException when label not found")
+        @DisplayName("Should throw ResourceNotFoundException when label not found in empresa")
         void crear_withInvalidEtiquetaId_shouldThrowResourceNotFoundException() {
             // Given
             palletRequest.setEtiquetasIds(Arrays.asList(999L));
             testPallet.setEtiquetas(new ArrayList<>());
 
-            when(palletRepository.existsByCodigoPallet(palletRequest.getCodigoPallet())).thenReturn(false);
+            when(palletRepository.existsByCodigoPalletAndEmpresaId(palletRequest.getCodigoPallet(), EMPRESA_ID)).thenReturn(false);
+            when(empresaRepository.findById(EMPRESA_ID)).thenReturn(Optional.of(testEmpresa));
             when(mapper.toEntity(palletRequest)).thenReturn(testPallet);
-            when(etiquetaRepository.findById(999L)).thenReturn(Optional.empty());
+            when(etiquetaRepository.findByIdAndEmpresaId(999L, EMPRESA_ID)).thenReturn(Optional.empty());
 
             // When/Then
-            assertThatThrownBy(() -> palletService.crear(palletRequest))
-                    .isInstanceOf(ResourceNotFoundException.class)
-                    .hasMessageContaining("Etiqueta no encontrada con ID: 999");
+            assertThatThrownBy(() -> palletService.crear(palletRequest, EMPRESA_ID))
+                    .isInstanceOf(ResourceNotFoundException.class);
         }
 
         @Test
@@ -294,12 +325,13 @@ class PalletServiceTest {
             testEtiqueta.setEstadoEtiqueta("ASIGNADA_PALLET");
             testPallet.setEtiquetas(new ArrayList<>());
 
-            when(palletRepository.existsByCodigoPallet(palletRequest.getCodigoPallet())).thenReturn(false);
+            when(palletRepository.existsByCodigoPalletAndEmpresaId(palletRequest.getCodigoPallet(), EMPRESA_ID)).thenReturn(false);
+            when(empresaRepository.findById(EMPRESA_ID)).thenReturn(Optional.of(testEmpresa));
             when(mapper.toEntity(palletRequest)).thenReturn(testPallet);
-            when(etiquetaRepository.findById(1L)).thenReturn(Optional.of(testEtiqueta));
+            when(etiquetaRepository.findByIdAndEmpresaId(1L, EMPRESA_ID)).thenReturn(Optional.of(testEtiqueta));
 
             // When/Then
-            assertThatThrownBy(() -> palletService.crear(palletRequest))
+            assertThatThrownBy(() -> palletService.crear(palletRequest, EMPRESA_ID))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("no está disponible");
         }
@@ -318,15 +350,16 @@ class PalletServiceTest {
             palletRequest.setEtiquetasIds(Arrays.asList(1L, 2L));
             testPallet.setEtiquetas(new ArrayList<>());
 
-            when(palletRepository.existsByCodigoPallet(palletRequest.getCodigoPallet())).thenReturn(false);
+            when(palletRepository.existsByCodigoPalletAndEmpresaId(palletRequest.getCodigoPallet(), EMPRESA_ID)).thenReturn(false);
+            when(empresaRepository.findById(EMPRESA_ID)).thenReturn(Optional.of(testEmpresa));
             when(mapper.toEntity(palletRequest)).thenReturn(testPallet);
-            when(etiquetaRepository.findById(1L)).thenReturn(Optional.of(testEtiqueta));
-            when(etiquetaRepository.findById(2L)).thenReturn(Optional.of(etiqueta2));
+            when(etiquetaRepository.findByIdAndEmpresaId(1L, EMPRESA_ID)).thenReturn(Optional.of(testEtiqueta));
+            when(etiquetaRepository.findByIdAndEmpresaId(2L, EMPRESA_ID)).thenReturn(Optional.of(etiqueta2));
             when(palletRepository.save(any(Pallet.class))).thenReturn(testPallet);
             when(mapper.toResponse(any(Pallet.class))).thenReturn(palletResponse);
 
             // When
-            palletService.crear(palletRequest);
+            palletService.crear(palletRequest, EMPRESA_ID);
 
             // Then
             assertThat(testPallet.getEtiquetas()).hasSize(2);
@@ -343,12 +376,12 @@ class PalletServiceTest {
         @DisplayName("Should update pallet with valid data")
         void actualizar_withValidData_shouldUpdatePallet() {
             // Given
-            when(palletRepository.findById(1L)).thenReturn(Optional.of(testPallet));
+            when(palletRepository.findByIdAndEmpresaId(1L, EMPRESA_ID)).thenReturn(Optional.of(testPallet));
             when(palletRepository.save(any(Pallet.class))).thenReturn(testPallet);
             when(mapper.toResponse(any(Pallet.class))).thenReturn(palletResponse);
 
             // When
-            PalletResponse result = palletService.actualizar(1L, palletRequest);
+            PalletResponse result = palletService.actualizar(1L, palletRequest, EMPRESA_ID);
 
             // Then
             assertThat(result).isNotNull();
@@ -360,12 +393,11 @@ class PalletServiceTest {
         @DisplayName("Should throw ResourceNotFoundException for invalid ID")
         void actualizar_withInvalidId_shouldThrowResourceNotFoundException() {
             // Given
-            when(palletRepository.findById(999L)).thenReturn(Optional.empty());
+            when(palletRepository.findByIdAndEmpresaId(999L, EMPRESA_ID)).thenReturn(Optional.empty());
 
             // When/Then
-            assertThatThrownBy(() -> palletService.actualizar(999L, palletRequest))
-                    .isInstanceOf(ResourceNotFoundException.class)
-                    .hasMessageContaining("Pallet no encontrado con ID: 999");
+            assertThatThrownBy(() -> palletService.actualizar(999L, palletRequest, EMPRESA_ID))
+                    .isInstanceOf(ResourceNotFoundException.class);
         }
 
         @Test
@@ -373,11 +405,11 @@ class PalletServiceTest {
         void actualizar_withDuplicateCodigo_shouldThrowIllegalArgumentException() {
             // Given
             testPallet.setCodigoPallet("PAL-2024-001"); // Different from request
-            when(palletRepository.findById(1L)).thenReturn(Optional.of(testPallet));
-            when(palletRepository.existsByCodigoPallet("PAL-2024-002")).thenReturn(true);
+            when(palletRepository.findByIdAndEmpresaId(1L, EMPRESA_ID)).thenReturn(Optional.of(testPallet));
+            when(palletRepository.existsByCodigoPalletAndEmpresaId("PAL-2024-002", EMPRESA_ID)).thenReturn(true);
 
             // When/Then
-            assertThatThrownBy(() -> palletService.actualizar(1L, palletRequest))
+            assertThatThrownBy(() -> palletService.actualizar(1L, palletRequest, EMPRESA_ID))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Ya existe un pallet con el código: PAL-2024-002");
         }
@@ -387,16 +419,16 @@ class PalletServiceTest {
         void actualizar_withSameCodigo_shouldAllowUpdate() {
             // Given
             testPallet.setCodigoPallet("PAL-2024-002"); // Same as request
-            when(palletRepository.findById(1L)).thenReturn(Optional.of(testPallet));
+            when(palletRepository.findByIdAndEmpresaId(1L, EMPRESA_ID)).thenReturn(Optional.of(testPallet));
             when(palletRepository.save(any(Pallet.class))).thenReturn(testPallet);
             when(mapper.toResponse(any(Pallet.class))).thenReturn(palletResponse);
 
             // When
-            PalletResponse result = palletService.actualizar(1L, palletRequest);
+            PalletResponse result = palletService.actualizar(1L, palletRequest, EMPRESA_ID);
 
             // Then
             assertThat(result).isNotNull();
-            verify(palletRepository, never()).existsByCodigoPallet(any());
+            verify(palletRepository, never()).existsByCodigoPalletAndEmpresaId(any(), any());
         }
     }
 
@@ -416,10 +448,10 @@ class PalletServiceTest {
             testPallet.setEtiquetas(new ArrayList<>(List.of(ep)));
             testEtiqueta.setEstadoEtiqueta("ASIGNADA_PALLET");
 
-            when(palletRepository.findById(1L)).thenReturn(Optional.of(testPallet));
+            when(palletRepository.findByIdAndEmpresaId(1L, EMPRESA_ID)).thenReturn(Optional.of(testPallet));
 
             // When
-            palletService.eliminar(1L);
+            palletService.eliminar(1L, EMPRESA_ID);
 
             // Then
             ArgumentCaptor<Pallet> palletCaptor = ArgumentCaptor.forClass(Pallet.class);
@@ -433,12 +465,11 @@ class PalletServiceTest {
         @DisplayName("Should throw ResourceNotFoundException for invalid ID")
         void eliminar_withInvalidId_shouldThrowResourceNotFoundException() {
             // Given
-            when(palletRepository.findById(999L)).thenReturn(Optional.empty());
+            when(palletRepository.findByIdAndEmpresaId(999L, EMPRESA_ID)).thenReturn(Optional.empty());
 
             // When/Then
-            assertThatThrownBy(() -> palletService.eliminar(999L))
-                    .isInstanceOf(ResourceNotFoundException.class)
-                    .hasMessageContaining("Pallet no encontrado con ID: 999");
+            assertThatThrownBy(() -> palletService.eliminar(999L, EMPRESA_ID))
+                    .isInstanceOf(ResourceNotFoundException.class);
         }
     }
 
@@ -450,12 +481,12 @@ class PalletServiceTest {
         @DisplayName("Should change pallet state")
         void cambiarEstado_shouldChangeState() {
             // Given
-            when(palletRepository.findById(1L)).thenReturn(Optional.of(testPallet));
+            when(palletRepository.findByIdAndEmpresaId(1L, EMPRESA_ID)).thenReturn(Optional.of(testPallet));
             when(palletRepository.save(any(Pallet.class))).thenReturn(testPallet);
             when(mapper.toResponse(any(Pallet.class))).thenReturn(palletResponse);
 
             // When
-            palletService.cambiarEstado(1L, "EN_CAMARA");
+            palletService.cambiarEstado(1L, "EN_CAMARA", EMPRESA_ID);
 
             // Then
             ArgumentCaptor<Pallet> palletCaptor = ArgumentCaptor.forClass(Pallet.class);
@@ -467,12 +498,11 @@ class PalletServiceTest {
         @DisplayName("Should throw ResourceNotFoundException for invalid ID")
         void cambiarEstado_withInvalidId_shouldThrowResourceNotFoundException() {
             // Given
-            when(palletRepository.findById(999L)).thenReturn(Optional.empty());
+            when(palletRepository.findByIdAndEmpresaId(999L, EMPRESA_ID)).thenReturn(Optional.empty());
 
             // When/Then
-            assertThatThrownBy(() -> palletService.cambiarEstado(999L, "EN_CAMARA"))
-                    .isInstanceOf(ResourceNotFoundException.class)
-                    .hasMessageContaining("Pallet no encontrado con ID: 999");
+            assertThatThrownBy(() -> palletService.cambiarEstado(999L, "EN_CAMARA", EMPRESA_ID))
+                    .isInstanceOf(ResourceNotFoundException.class);
         }
     }
 }

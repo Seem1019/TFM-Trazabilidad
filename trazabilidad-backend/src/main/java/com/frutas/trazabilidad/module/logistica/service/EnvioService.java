@@ -1,6 +1,8 @@
 package com.frutas.trazabilidad.module.logistica.service;
 
 import com.frutas.trazabilidad.entity.User;
+import com.frutas.trazabilidad.exception.ForbiddenException;
+import com.frutas.trazabilidad.exception.ResourceNotFoundException;
 import com.frutas.trazabilidad.repository.UserRepository;
 import com.frutas.trazabilidad.module.empaque.entity.Pallet;
 import com.frutas.trazabilidad.module.empaque.repository.PalletRepository;
@@ -9,8 +11,8 @@ import com.frutas.trazabilidad.module.logistica.dto.EnvioResponse;
 import com.frutas.trazabilidad.module.logistica.entity.Envio;
 import com.frutas.trazabilidad.module.logistica.mapper.EnvioMapper;
 import com.frutas.trazabilidad.module.logistica.repository.EnvioRepository;
+import com.frutas.trazabilidad.security.TenantContext;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,11 +22,11 @@ import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
  * Service para gestión de envíos/exportaciones.
+ * Implementa aislamiento multitenant y auditoría.
  */
 @Service
 @RequiredArgsConstructor
@@ -35,28 +37,27 @@ public class EnvioService {
     private final UserRepository userRepository;
     private final EnvioMapper envioMapper;
     private final AuditoriaEventoService auditoriaService;
+    private final TenantContext tenantContext;
 
     /**
      * Crear un nuevo envío.
      */
     @Transactional
-    public EnvioResponse crear(EnvioRequest request) {
-        // Validar que el código no exista
-        if (envioRepository.existsByCodigoEnvio(request.getCodigoEnvio())) {
+    public EnvioResponse crear(EnvioRequest request, Long empresaId) {
+        User usuario = tenantContext.getCurrentUser();
+        validarPertenenciaEmpresa(usuario, empresaId);
+
+        // Validar que el código no exista en la empresa
+        if (envioRepository.existsByCodigoEnvioAndEmpresaId(request.getCodigoEnvio(), empresaId)) {
             throw new IllegalArgumentException("Ya existe un envío con el código: " + request.getCodigoEnvio());
         }
-
-        // Obtener usuario autenticado
-        String email = Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getName();
-        User usuario = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         // Crear entidad
         Envio envio = envioMapper.toEntity(request, usuario);
 
         // Asignar pallets si se proporcionan
         if (request.getPalletsIds() != null && !request.getPalletsIds().isEmpty()) {
-            asignarPallets(envio, request.getPalletsIds(), usuario.getEmpresa().getId());
+            asignarPallets(envio, request.getPalletsIds(), empresaId);
         }
 
         // Calcular totales
@@ -81,18 +82,12 @@ public class EnvioService {
      * Actualizar un envío existente.
      */
     @Transactional
-    public EnvioResponse actualizar(Long id, EnvioRequest request) {
-        String email = Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getName();
-        User usuario = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+    public EnvioResponse actualizar(Long id, EnvioRequest request, Long empresaId) {
+        User usuario = tenantContext.getCurrentUser();
+        validarPertenenciaEmpresa(usuario, empresaId);
 
-        Envio envio = envioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Envío no encontrado con ID: " + id));
-
-        // Validar que pertenece a la empresa
-        if (!envioRepository.existsByIdAndEmpresaId(id, usuario.getEmpresa().getId())) {
-            throw new RuntimeException("No tiene permisos para modificar este envío");
-        }
+        Envio envio = envioRepository.findByIdAndEmpresaId(id, empresaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Envío", id));
 
         // Validar que no esté cerrado
         if (envio.estaCerrado()) {
@@ -123,23 +118,18 @@ public class EnvioService {
      * Asignar pallets a un envío.
      */
     @Transactional
-    public EnvioResponse asignarPallets(Long envioId, List<Long> palletsIds) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User usuario = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+    public EnvioResponse asignarPallets(Long envioId, List<Long> palletsIds, Long empresaId) {
+        User usuario = tenantContext.getCurrentUser();
+        validarPertenenciaEmpresa(usuario, empresaId);
 
-        Envio envio = envioRepository.findById(envioId)
-                .orElseThrow(() -> new RuntimeException("Envío no encontrado con ID: " + envioId));
-
-        if (!envioRepository.existsByIdAndEmpresaId(envioId, usuario.getEmpresa().getId())) {
-            throw new RuntimeException("No tiene permisos para modificar este envío");
-        }
+        Envio envio = envioRepository.findByIdAndEmpresaId(envioId, empresaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Envío", envioId));
 
         if (envio.estaCerrado()) {
             throw new IllegalStateException("No se puede modificar un envío cerrado");
         }
 
-        asignarPallets(envio, palletsIds, usuario.getEmpresa().getId());
+        asignarPallets(envio, palletsIds, empresaId);
         calcularTotales(envio);
         envio = envioRepository.save(envio);
 
@@ -160,17 +150,12 @@ public class EnvioService {
      * Cambiar estado de un envío.
      */
     @Transactional
-    public EnvioResponse cambiarEstado(Long id, String nuevoEstado) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User usuario = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+    public EnvioResponse cambiarEstado(Long id, String nuevoEstado, Long empresaId) {
+        User usuario = tenantContext.getCurrentUser();
+        validarPertenenciaEmpresa(usuario, empresaId);
 
-        Envio envio = envioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Envío no encontrado con ID: " + id));
-
-        if (!envioRepository.existsByIdAndEmpresaId(id, usuario.getEmpresa().getId())) {
-            throw new RuntimeException("No tiene permisos para modificar este envío");
-        }
+        Envio envio = envioRepository.findByIdAndEmpresaId(id, empresaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Envío", id));
 
         String estadoAnterior = envio.getEstado();
         envio.setEstado(nuevoEstado);
@@ -199,17 +184,12 @@ public class EnvioService {
      * Cerrar un envío (genera hash SHA-256 blockchain).
      */
     @Transactional
-    public EnvioResponse cerrar(Long id) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User usuario = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+    public EnvioResponse cerrar(Long id, Long empresaId) {
+        User usuario = tenantContext.getCurrentUser();
+        validarPertenenciaEmpresa(usuario, empresaId);
 
-        Envio envio = envioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Envío no encontrado con ID: " + id));
-
-        if (!envioRepository.existsByIdAndEmpresaId(id, usuario.getEmpresa().getId())) {
-            throw new RuntimeException("No tiene permisos para cerrar este envío");
-        }
+        Envio envio = envioRepository.findByIdAndEmpresaId(id, empresaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Envío", id));
 
         if (envio.estaCerrado()) {
             throw new IllegalStateException("El envío ya está cerrado");
@@ -241,12 +221,8 @@ public class EnvioService {
      * Listar envíos por empresa.
      */
     @Transactional(readOnly = true)
-    public List<EnvioResponse> listarPorEmpresa() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User usuario = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-
-        return envioRepository.findByEmpresaId(usuario.getEmpresa().getId())
+    public List<EnvioResponse> listarPorEmpresa(Long empresaId) {
+        return envioRepository.findByEmpresaIdAndActivoTrue(empresaId)
                 .stream()
                 .map(envioMapper::toResponse)
                 .collect(Collectors.toList());
@@ -256,12 +232,8 @@ public class EnvioService {
      * Listar envíos por estado.
      */
     @Transactional(readOnly = true)
-    public List<EnvioResponse> listarPorEstado(String estado) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User usuario = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-
-        return envioRepository.findByEmpresaIdAndEstado(usuario.getEmpresa().getId(), estado)
+    public List<EnvioResponse> listarPorEstado(String estado, Long empresaId) {
+        return envioRepository.findByEmpresaIdAndEstadoAndActivoTrue(empresaId, estado)
                 .stream()
                 .map(envioMapper::toResponse)
                 .collect(Collectors.toList());
@@ -271,18 +243,9 @@ public class EnvioService {
      * Obtener envío por ID.
      */
     @Transactional(readOnly = true)
-    public EnvioResponse obtenerPorId(Long id) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User usuario = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-
-        Envio envio = envioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Envío no encontrado con ID: " + id));
-
-        if (!envioRepository.existsByIdAndEmpresaId(id, usuario.getEmpresa().getId())) {
-            throw new RuntimeException("No tiene permisos para ver este envío");
-        }
-
+    public EnvioResponse obtenerPorId(Long id, Long empresaId) {
+        Envio envio = envioRepository.findByIdAndEmpresaId(id, empresaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Envío", id));
         return envioMapper.toResponse(envio);
     }
 
@@ -290,17 +253,12 @@ public class EnvioService {
      * Eliminar envío (soft delete).
      */
     @Transactional
-    public void eliminar(Long id) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User usuario = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+    public void eliminar(Long id, Long empresaId) {
+        User usuario = tenantContext.getCurrentUser();
+        validarPertenenciaEmpresa(usuario, empresaId);
 
-        Envio envio = envioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Envío no encontrado con ID: " + id));
-
-        if (!envioRepository.existsByIdAndEmpresaId(id, usuario.getEmpresa().getId())) {
-            throw new RuntimeException("No tiene permisos para eliminar este envío");
-        }
+        Envio envio = envioRepository.findByIdAndEmpresaId(id, empresaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Envío", id));
 
         if (envio.estaCerrado()) {
             throw new IllegalStateException("No se puede eliminar un envío cerrado");
@@ -320,10 +278,17 @@ public class EnvioService {
 
     // ========== MÉTODOS AUXILIARES ==========
 
+    private void validarPertenenciaEmpresa(User usuario, Long empresaId) {
+        if (!usuario.getEmpresa().getId().equals(empresaId)) {
+            throw new ForbiddenException("No tiene permisos para esta operación");
+        }
+    }
+
     private void asignarPallets(Envio envio, List<Long> palletsIds, Long empresaId) {
         for (Long palletId : palletsIds) {
-            Pallet pallet = palletRepository.findById(palletId)
-                    .orElseThrow(() -> new RuntimeException("Pallet no encontrado con ID: " + palletId));
+            // Buscar pallet validando que pertenezca a la empresa
+            Pallet pallet = palletRepository.findByIdAndEmpresaId(palletId, empresaId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Pallet", palletId));
 
             // Validar que el pallet esté disponible
             if (!"ARMADO".equals(pallet.getEstadoPallet()) && !"EN_CAMARA".equals(pallet.getEstadoPallet())) {

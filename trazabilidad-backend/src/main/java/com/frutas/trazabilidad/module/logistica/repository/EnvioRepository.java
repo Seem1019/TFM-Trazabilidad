@@ -94,6 +94,31 @@ public interface EnvioRepository extends JpaRepository<Envio, Long> {
     boolean existsByIdAndEmpresaId(@Param("envioId") Long envioId, @Param("empresaId") Long empresaId);
 
     /**
+     * Busca envío por ID validando pertenencia a empresa.
+     */
+    @Query("SELECT e FROM Envio e WHERE e.id = :id AND e.usuario.empresa.id = :empresaId")
+    Optional<Envio> findByIdAndEmpresaId(@Param("id") Long id, @Param("empresaId") Long empresaId);
+
+    /**
+     * Lista envíos activos por empresa.
+     */
+    @Query("SELECT e FROM Envio e WHERE e.usuario.empresa.id = :empresaId AND e.activo = true ORDER BY e.createdAt DESC")
+    List<Envio> findByEmpresaIdAndActivoTrue(@Param("empresaId") Long empresaId);
+
+    /**
+     * Lista envíos activos por estado y empresa.
+     */
+    @Query("SELECT e FROM Envio e WHERE e.usuario.empresa.id = :empresaId AND e.estado = :estado AND e.activo = true ORDER BY e.createdAt DESC")
+    List<Envio> findByEmpresaIdAndEstadoAndActivoTrue(@Param("empresaId") Long empresaId, @Param("estado") String estado);
+
+    /**
+     * Verifica si existe código de envío en una empresa.
+     */
+    @Query("SELECT CASE WHEN COUNT(e) > 0 THEN true ELSE false END FROM Envio e " +
+            "WHERE e.codigoEnvio = :codigoEnvio AND e.usuario.empresa.id = :empresaId")
+    boolean existsByCodigoEnvioAndEmpresaId(@Param("codigoEnvio") String codigoEnvio, @Param("empresaId") Long empresaId);
+
+    /**
      * Lista envíos cerrados en un rango de fechas.
      */
     @Query("SELECT e FROM Envio e WHERE e.usuario.empresa.id = :empresaId " +

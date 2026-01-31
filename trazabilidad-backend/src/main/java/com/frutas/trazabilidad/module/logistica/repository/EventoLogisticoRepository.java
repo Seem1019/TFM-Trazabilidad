@@ -77,4 +77,17 @@ public interface EventoLogisticoRepository extends JpaRepository<EventoLogistico
      */
     @Query("SELECT COUNT(e) FROM EventoLogistico e WHERE e.envio.id = :envioId AND e.tipoEvento = :tipoEvento AND e.activo = true")
     long countByEnvioIdAndTipoEvento(@Param("envioId") Long envioId, @Param("tipoEvento") String tipoEvento);
+
+    /**
+     * Busca evento por ID validando pertenencia a empresa.
+     */
+    @Query("SELECT e FROM EventoLogistico e WHERE e.id = :id AND e.envio.usuario.empresa.id = :empresaId")
+    java.util.Optional<EventoLogistico> findByIdAndEmpresaId(@Param("id") Long id, @Param("empresaId") Long empresaId);
+
+    /**
+     * Lista eventos activos por envío ordenados por fecha.
+     */
+    @Query("SELECT e FROM EventoLogistico e WHERE e.envio.id = :envioId AND e.activo = true " +
+            "ORDER BY e.fechaEvento ASC, e.horaEvento ASC")
+    List<EventoLogistico> findByEnvioIdAndActivoTrueOrderByFechaEventoAsc(@Param("envioId") Long envioId);
 }

@@ -5,6 +5,11 @@ spring:
   application:
     name: trazabilidad-backend
 
+  # Deshabilitar auto-detección de Docker Compose
+  docker:
+    compose:
+      enabled: false
+
   datasource:
     url: jdbc:postgresql://localhost:5432/trazabilidad_db
     username: tfm_user
@@ -22,11 +27,13 @@ spring:
         jdbc:
           time_zone: UTC
 
-  # Configuración de seguridad
+  # Configuración de seguridad JWT
   security:
     jwt:
       secret: ${JWT_SECRET:mi-super-secreto-jwt-que-debe-tener-al-menos-256-bits-para-ser-seguro}
-      expiration: 86400000  # 24 horas en milisegundos
+      access-token-expiration: 900000      # 15 minutos en milisegundos
+      refresh-token-expiration: 604800000  # 7 días en milisegundos
+
   web:
     error:
       include-message: always
@@ -43,6 +50,12 @@ app:
   # URL pública para consulta de trazabilidad por QR
   # Apunta al frontend que consume el endpoint público del backend
   qr-base-url: ${QR_BASE_URL:${app.frontend-url}/public/traza}
+
+  # Rate limiting (peticiones por minuto por IP)
+  rate-limit:
+    enabled: true
+    requests-per-minute: 60
+    login-requests-per-minute: 10
 
 server:
   port: 8080

@@ -12,6 +12,7 @@ import com.frutas.trazabilidad.entity.User;
 import com.frutas.trazabilidad.repository.EmpresaRepository;
 import com.frutas.trazabilidad.repository.PasswordResetTokenRepository;
 import com.frutas.trazabilidad.repository.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -21,6 +22,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
@@ -59,12 +61,20 @@ class AuthControllerIntegrationTest {
 
     private Empresa testEmpresa;
     private User testUser;
+    private HttpServletRequest mockRequest;
 
     @BeforeEach
     void setUp() {
+        // Create mock HttpServletRequest
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRemoteAddr("127.0.0.1");
+        request.addHeader("User-Agent", "Test-Agent");
+        mockRequest = request;
+
         // Use JdbcTemplate to delete all data in correct order (respecting foreign keys)
         // JdbcTemplate handles transactions automatically
         // Order matters: child tables before parent tables
+        jdbcTemplate.execute("DELETE FROM refresh_tokens");
         jdbcTemplate.execute("DELETE FROM password_reset_tokens");
         jdbcTemplate.execute("DELETE FROM auditoria_eventos");
         jdbcTemplate.execute("DELETE FROM documentos_exportacion");
@@ -132,14 +142,15 @@ class AuthControllerIntegrationTest {
         void login_withValidCredentials_shouldReturnToken() {
             LoginRequest request = new LoginRequest("admin@frutascolombia.com", "password123");
 
-            ResponseEntity<ApiResponse<LoginResponse>> response = authController.login(request);
+            ResponseEntity<ApiResponse<LoginResponse>> response = authController.login(request, mockRequest);
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
             assertThat(response.getBody()).isNotNull();
             assertThat(response.getBody().getSuccess()).isTrue();
             assertThat(response.getBody().getMessage()).isEqualTo("Login exitoso");
             assertThat(response.getBody().getData()).isNotNull();
-            assertThat(response.getBody().getData().getToken()).isNotNull();
+            assertThat(response.getBody().getData().getAccessToken()).isNotNull();
+            assertThat(response.getBody().getData().getRefreshToken()).isNotNull();
             assertThat(response.getBody().getData().getUser().getEmail()).isEqualTo("admin@frutascolombia.com");
             assertThat(response.getBody().getData().getUser().getNombre()).isEqualTo("Juan");
         }
@@ -150,7 +161,7 @@ class AuthControllerIntegrationTest {
             LoginRequest request = new LoginRequest("wrong@email.com", "password123");
 
             try {
-                authController.login(request);
+                authController.login(request, mockRequest);
                 assertThat(false).as("Should have thrown exception").isTrue();
             } catch (Exception e) {
                 // Expected - invalid credentials should throw exception
@@ -164,7 +175,7 @@ class AuthControllerIntegrationTest {
             LoginRequest request = new LoginRequest("admin@frutascolombia.com", "wrongpassword");
 
             try {
-                authController.login(request);
+                authController.login(request, mockRequest);
                 assertThat(false).as("Should have thrown exception").isTrue();
             } catch (Exception e) {
                 // Expected - invalid credentials should throw exception
@@ -181,7 +192,7 @@ class AuthControllerIntegrationTest {
             LoginRequest request = new LoginRequest("admin@frutascolombia.com", "password123");
 
             try {
-                authController.login(request);
+                authController.login(request, mockRequest);
                 assertThat(false).as("Should have thrown exception").isTrue();
             } catch (Exception e) {
                 // Expected - inactive user should throw exception
@@ -272,7 +283,7 @@ class AuthControllerIntegrationTest {
 
             // Verify can login with new password
             LoginRequest loginRequest = new LoginRequest("admin@frutascolombia.com", "newPassword123");
-            ResponseEntity<ApiResponse<LoginResponse>> loginResponse = authController.login(loginRequest);
+            ResponseEntity<ApiResponse<LoginResponse>> loginResponse = authController.login(loginRequest, mockRequest);
 
             assertThat(loginResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
             assertThat(loginResponse.getBody()).isNotNull();
@@ -376,18 +387,18 @@ class AuthControllerIntegrationTest {
             // Step 3: Login with new password
             LoginRequest loginRequest = new LoginRequest("admin@frutascolombia.com", "brandNewPassword123");
 
-            ResponseEntity<ApiResponse<LoginResponse>> loginResponse = authController.login(loginRequest);
+            ResponseEntity<ApiResponse<LoginResponse>> loginResponse = authController.login(loginRequest, mockRequest);
 
             assertThat(loginResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
             assertThat(loginResponse.getBody()).isNotNull();
             assertThat(loginResponse.getBody().getData()).isNotNull();
-            assertThat(loginResponse.getBody().getData().getToken()).isNotNull();
+            assertThat(loginResponse.getBody().getData().getAccessToken()).isNotNull();
 
             // Step 4: Old password should not work
             LoginRequest oldLoginRequest = new LoginRequest("admin@frutascolombia.com", "password123");
 
             try {
-                authController.login(oldLoginRequest);
+                authController.login(oldLoginRequest, mockRequest);
                 assertThat(false).as("Should have thrown exception for old password").isTrue();
             } catch (Exception e) {
                 // Expected - old password should no longer work

@@ -1,7 +1,8 @@
 package com.frutas.trazabilidad.module.logistica.service;
 
 import com.frutas.trazabilidad.entity.User;
-import com.frutas.trazabilidad.repository.UserRepository;
+import com.frutas.trazabilidad.exception.ForbiddenException;
+import com.frutas.trazabilidad.exception.ResourceNotFoundException;
 import com.frutas.trazabilidad.module.logistica.dto.DocumentoExportacionRequest;
 import com.frutas.trazabilidad.module.logistica.dto.DocumentoExportacionResponse;
 import com.frutas.trazabilidad.module.logistica.entity.DocumentoExportacion;
@@ -9,38 +10,39 @@ import com.frutas.trazabilidad.module.logistica.entity.Envio;
 import com.frutas.trazabilidad.module.logistica.mapper.DocumentoExportacionMapper;
 import com.frutas.trazabilidad.module.logistica.repository.DocumentoExportacionRepository;
 import com.frutas.trazabilidad.module.logistica.repository.EnvioRepository;
+import com.frutas.trazabilidad.security.TenantContext;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Servicio para gestión de documentos de exportación.
+ * Implementa aislamiento multitenant y auditoría.
+ */
 @Service
 @RequiredArgsConstructor
 public class DocumentoExportacionService {
 
     private final DocumentoExportacionRepository documentoRepository;
     private final EnvioRepository envioRepository;
-    private final UserRepository userRepository;
     private final DocumentoExportacionMapper documentoMapper;
     private final AuditoriaEventoService auditoriaService;
+    private final TenantContext tenantContext;
 
     @Transactional
-    public DocumentoExportacionResponse crear(DocumentoExportacionRequest request) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User usuario = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+    public DocumentoExportacionResponse crear(DocumentoExportacionRequest request, Long empresaId) {
+        User usuario = tenantContext.getCurrentUser();
+        validarPertenenciaEmpresa(usuario, empresaId);
 
-        Envio envio = envioRepository.findById(request.getEnvioId())
-                .orElseThrow(() -> new RuntimeException("Envío no encontrado con ID: " + request.getEnvioId()));
+        // Validar que el envío pertenece a la empresa
+        Envio envio = envioRepository.findByIdAndEmpresaId(request.getEnvioId(), empresaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Envío", request.getEnvioId()));
 
-        if (!envioRepository.existsByIdAndEmpresaId(request.getEnvioId(), usuario.getEmpresa().getId())) {
-            throw new RuntimeException("No tiene permisos para agregar documentos a este envío");
-        }
-
-        if (documentoRepository.existsByNumeroDocumento(request.getNumeroDocumento())) {
+        // Validar que no existe documento con el mismo número en la empresa
+        if (documentoRepository.existsByNumeroDocumentoAndEmpresaId(request.getNumeroDocumento(), empresaId)) {
             throw new IllegalArgumentException("Ya existe un documento con el número: " + request.getNumeroDocumento());
         }
 
@@ -59,17 +61,12 @@ public class DocumentoExportacionService {
     }
 
     @Transactional
-    public DocumentoExportacionResponse actualizar(Long id, DocumentoExportacionRequest request) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User usuario = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+    public DocumentoExportacionResponse actualizar(Long id, DocumentoExportacionRequest request, Long empresaId) {
+        User usuario = tenantContext.getCurrentUser();
+        validarPertenenciaEmpresa(usuario, empresaId);
 
-        DocumentoExportacion documento = documentoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Documento no encontrado con ID: " + id));
-
-        if (!documentoRepository.existsByIdAndEmpresaId(id, usuario.getEmpresa().getId())) {
-            throw new RuntimeException("No tiene permisos para modificar este documento");
-        }
+        DocumentoExportacion documento = documentoRepository.findByIdAndEmpresaId(id, empresaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Documento", id));
 
         documentoMapper.updateEntity(documento, request);
         documento = documentoRepository.save(documento);
@@ -88,17 +85,12 @@ public class DocumentoExportacionService {
     }
 
     @Transactional
-    public DocumentoExportacionResponse cambiarEstado(Long id, String nuevoEstado) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User usuario = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+    public DocumentoExportacionResponse cambiarEstado(Long id, String nuevoEstado, Long empresaId) {
+        User usuario = tenantContext.getCurrentUser();
+        validarPertenenciaEmpresa(usuario, empresaId);
 
-        DocumentoExportacion documento = documentoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Documento no encontrado con ID: " + id));
-
-        if (!documentoRepository.existsByIdAndEmpresaId(id, usuario.getEmpresa().getId())) {
-            throw new RuntimeException("No tiene permisos para modificar este documento");
-        }
+        DocumentoExportacion documento = documentoRepository.findByIdAndEmpresaId(id, empresaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Documento", id));
 
         String estadoAnterior = documento.getEstado();
         documento.setEstado(nuevoEstado);
@@ -118,49 +110,33 @@ public class DocumentoExportacionService {
     }
 
     @Transactional(readOnly = true)
-    public List<DocumentoExportacionResponse> listarPorEnvio(Long envioId) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User usuario = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-
-        if (!envioRepository.existsByIdAndEmpresaId(envioId, usuario.getEmpresa().getId())) {
-            throw new RuntimeException("No tiene permisos para ver documentos de este envío");
+    public List<DocumentoExportacionResponse> listarPorEnvio(Long envioId, Long empresaId) {
+        // Validar que el envío pertenece a la empresa
+        if (!envioRepository.existsByIdAndEmpresaId(envioId, empresaId)) {
+            throw new ResourceNotFoundException("Envío", envioId);
         }
 
-        return documentoRepository.findByEnvioId(envioId)
+        return documentoRepository.findByEnvioIdAndActivoTrue(envioId)
                 .stream()
                 .map(documentoMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public DocumentoExportacionResponse obtenerPorId(Long id) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User usuario = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-
-        DocumentoExportacion documento = documentoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Documento no encontrado con ID: " + id));
-
-        if (!documentoRepository.existsByIdAndEmpresaId(id, usuario.getEmpresa().getId())) {
-            throw new RuntimeException("No tiene permisos para ver este documento");
-        }
+    public DocumentoExportacionResponse obtenerPorId(Long id, Long empresaId) {
+        DocumentoExportacion documento = documentoRepository.findByIdAndEmpresaId(id, empresaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Documento", id));
 
         return documentoMapper.toResponse(documento);
     }
 
     @Transactional
-    public void eliminar(Long id) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User usuario = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+    public void eliminar(Long id, Long empresaId) {
+        User usuario = tenantContext.getCurrentUser();
+        validarPertenenciaEmpresa(usuario, empresaId);
 
-        DocumentoExportacion documento = documentoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Documento no encontrado con ID: " + id));
-
-        if (!documentoRepository.existsByIdAndEmpresaId(id, usuario.getEmpresa().getId())) {
-            throw new RuntimeException("No tiene permisos para eliminar este documento");
-        }
+        DocumentoExportacion documento = documentoRepository.findByIdAndEmpresaId(id, empresaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Documento", id));
 
         documento.setActivo(false);
         documentoRepository.save(documento);
@@ -172,5 +148,11 @@ public class DocumentoExportacionService {
                 "Eliminación de documento",
                 usuario
         );
+    }
+
+    private void validarPertenenciaEmpresa(User usuario, Long empresaId) {
+        if (!usuario.getEmpresa().getId().equals(empresaId)) {
+            throw new ForbiddenException("No tiene permisos para esta operación");
+        }
     }
 }

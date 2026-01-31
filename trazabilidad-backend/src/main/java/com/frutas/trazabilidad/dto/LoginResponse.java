@@ -8,14 +8,28 @@ import lombok.NoArgsConstructor;
 
 /**
  * DTO para la respuesta de login exitoso.
+ * Incluye access token, refresh token e información del usuario.
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class LoginResponse {
-    private String token;
+
+    private String accessToken;
+    private String refreshToken;
+    private String tokenType;
+    private Long expiresIn; // Segundos hasta expiración del access token
     private UserInfo user;
+
+    /**
+     * @deprecated Use accessToken instead
+     * Mantiene compatibilidad con frontend existente.
+     */
+    @Deprecated
+    public String getToken() {
+        return accessToken;
+    }
 
     @Data
     @Builder

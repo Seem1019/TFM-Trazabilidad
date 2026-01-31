@@ -91,4 +91,23 @@ public interface DocumentoExportacionRepository extends JpaRepository<DocumentoE
      */
     @Query("SELECT COUNT(d) FROM DocumentoExportacion d WHERE d.envio.id = :envioId AND d.estado = 'APROBADO' AND d.activo = true")
     long countAprobadosByEnvioId(@Param("envioId") Long envioId);
+
+    /**
+     * Busca documento por ID validando pertenencia a empresa.
+     */
+    @Query("SELECT d FROM DocumentoExportacion d WHERE d.id = :id AND d.envio.usuario.empresa.id = :empresaId")
+    Optional<DocumentoExportacion> findByIdAndEmpresaId(@Param("id") Long id, @Param("empresaId") Long empresaId);
+
+    /**
+     * Lista documentos activos por envío.
+     */
+    @Query("SELECT d FROM DocumentoExportacion d WHERE d.envio.id = :envioId AND d.activo = true ORDER BY d.fechaEmision DESC")
+    List<DocumentoExportacion> findByEnvioIdAndActivoTrue(@Param("envioId") Long envioId);
+
+    /**
+     * Verifica si existe documento con número en empresa.
+     */
+    @Query("SELECT CASE WHEN COUNT(d) > 0 THEN true ELSE false END FROM DocumentoExportacion d " +
+            "WHERE d.numeroDocumento = :numeroDocumento AND d.envio.usuario.empresa.id = :empresaId AND d.activo = true")
+    boolean existsByNumeroDocumentoAndEmpresaId(@Param("numeroDocumento") String numeroDocumento, @Param("empresaId") Long empresaId);
 }

@@ -57,4 +57,20 @@ public interface EtiquetaRepository extends JpaRepository<Etiqueta, Long> {
             "FROM Etiqueta e " +
             "WHERE e.id = :id AND e.clasificacion.recepcion.lote.finca.empresa.id = :empresaId")
     boolean existsByIdAndEmpresaId(@Param("id") Long id, @Param("empresaId") Long empresaId);
+
+    // Buscar etiqueta por ID validando pertenencia a empresa
+    @Query("SELECT e FROM Etiqueta e " +
+            "WHERE e.id = :id AND e.clasificacion.recepcion.lote.finca.empresa.id = :empresaId")
+    Optional<Etiqueta> findByIdAndEmpresaId(@Param("id") Long id, @Param("empresaId") Long empresaId);
+
+    // Listar etiquetas por clasificación validando empresa
+    @Query("SELECT e FROM Etiqueta e " +
+            "WHERE e.clasificacion.id = :clasificacionId " +
+            "AND e.clasificacion.recepcion.lote.finca.empresa.id = :empresaId " +
+            "AND e.activo = true " +
+            "ORDER BY e.createdAt DESC")
+    List<Etiqueta> findByClasificacionIdAndEmpresaId(
+            @Param("clasificacionId") Long clasificacionId,
+            @Param("empresaId") Long empresaId
+    );
 }
