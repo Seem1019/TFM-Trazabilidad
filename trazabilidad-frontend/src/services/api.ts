@@ -174,6 +174,22 @@ api.interceptors.request.use(
   }
 );
 
+/**
+ * Transforma un error de Axios en un error con el mensaje de la API
+ */
+function rejectWithApiMessage(error: AxiosError): Promise<never> {
+  const apiMessage = extractErrorMessage(error);
+  const enhancedError = new Error(apiMessage) as Error & {
+    originalError: AxiosError;
+    status?: number;
+    code?: string;
+  };
+  enhancedError.originalError = error;
+  enhancedError.status = error.response?.status;
+  enhancedError.code = error.code;
+  return Promise.reject(enhancedError);
+}
+
 // Response interceptor - maneja errores de autenticación con refresh automático
 api.interceptors.response.use(
   (response) => response,
@@ -182,11 +198,17 @@ api.interceptors.response.use(
 
     // Si es error 401 y no es un retry
     if (error.response?.status === 401 && !originalRequest._retry) {
-      // No intentar refresh si es la propia llamada de refresh o login
-      if (originalRequest.url?.includes('/auth/refresh') || originalRequest.url?.includes('/auth/login')) {
-        console.log('[Auth] Auth endpoint failed, clearing session');
+      // Para login, no hacer nada especial, dejar que el error fluya con el mensaje de la API
+      if (originalRequest.url?.includes('/auth/login')) {
+        // No limpiar auth ni redirigir, solo transformar el error al final
+        return rejectWithApiMessage(error);
+      }
+
+      // Para refresh fallido, limpiar sesión
+      if (originalRequest.url?.includes('/auth/refresh')) {
+        console.log('[Auth] Refresh endpoint failed, clearing session');
         clearAuthAndRedirect();
-        return Promise.reject(error);
+        return rejectWithApiMessage(error);
       }
 
       if (isRefreshing) {
@@ -213,7 +235,7 @@ api.interceptors.response.use(
         console.log('[Auth] No refresh token available');
         isRefreshing = false;
         clearAuthAndRedirect();
-        return Promise.reject(error);
+        return rejectWithApiMessage(error);
       }
 
       try {
@@ -248,6 +270,10 @@ api.interceptors.response.use(
         // Refresh falló, limpiar auth y redirigir
         processQueue(refreshError, null);
         clearAuthAndRedirect();
+        // Si es un AxiosError, transformarlo
+        if (axios.isAxiosError(refreshError)) {
+          return rejectWithApiMessage(refreshError);
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
