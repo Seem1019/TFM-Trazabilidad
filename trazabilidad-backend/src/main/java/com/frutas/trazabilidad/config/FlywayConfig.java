@@ -39,7 +39,7 @@ public class FlywayConfig {
      * Crea y ejecuta Flyway inmediatamente.
      * Este bean debe crearse antes que cualquier bean de JPA/Hibernate.
      */
-    @Bean(initMethod = "")
+    @Bean
     public Flyway flyway(DataSource dataSource) {
         log.info("=================================================");
         log.info("🔧 Configurando Flyway manualmente...");

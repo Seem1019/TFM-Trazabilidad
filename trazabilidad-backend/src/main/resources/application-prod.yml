@@ -20,9 +20,8 @@ spring:
         jdbc:
           time_zone: UTC
 
-  # Flyway - Migraciones de base de datos
-  flyway:
-    enabled: false  # Deshabilitamos autoconfig, usamos FlywayConfig.java
+  # Flyway - configuración manual en FlywayConfig.java
+  # (No usamos la autoconfiguración de Spring Boot)
 
   security:
     jwt:
