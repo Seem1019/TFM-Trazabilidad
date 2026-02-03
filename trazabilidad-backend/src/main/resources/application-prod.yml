@@ -12,21 +12,17 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate  # Solo valida, Flyway maneja las migraciones
+    defer-datasource-initialization: true  # Importante: asegura que Flyway corra primero
     show-sql: false
     properties:
       hibernate:
         format_sql: false
-        dialect: org.hibernate.dialect.PostgreSQLDialect
         jdbc:
           time_zone: UTC
 
   # Flyway - Migraciones de base de datos
   flyway:
-    enabled: true
-    baseline-on-migrate: true  # Crea baseline si la BD ya existe
-    baseline-version: '0'      # Versión base para BD existentes
-    locations: classpath:db/migration
-    validate-on-migrate: true
+    enabled: false  # Deshabilitamos autoconfig, usamos FlywayConfig.java
 
   security:
     jwt:
@@ -65,5 +61,6 @@ logging:
   level:
     root: INFO
     com.frutas.trazabilidad: INFO
+    org.flywaydb: INFO
     org.springframework.security: WARN
     org.hibernate: WARN
