@@ -64,6 +64,9 @@ public class JpaConfig {
         properties.setProperty("hibernate.hbm2ddl.auto", ddlAuto);
         properties.setProperty("hibernate.jdbc.time_zone", "UTC");
         properties.setProperty("hibernate.format_sql", String.valueOf(showSql));
+        // Estrategia de naming: convierte camelCase a snake_case (ej: camposModificados -> campos_modificados)
+        properties.setProperty("hibernate.physical_naming_strategy",
+                "org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy");
         em.setJpaProperties(properties);
 
         return em;
