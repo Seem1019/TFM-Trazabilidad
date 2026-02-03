@@ -14,6 +14,7 @@ import com.frutas.trazabilidad.module.logistica.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -24,9 +25,11 @@ import java.time.LocalTime;
 /**
  * Carga datos de prueba en la base de datos al iniciar la aplicación.
  * Solo se ejecuta en perfil 'dev' o 'test'.
+ * Depende de Flyway para asegurar que las tablas existan.
  */
 @Component
 @Profile({"dev", "test","prod"})
+@DependsOn("flyway")  // Asegura que Flyway cree las tablas primero
 @RequiredArgsConstructor
 @Slf4j
 public class DataSeeder implements CommandLineRunner {
@@ -111,10 +114,10 @@ public class DataSeeder implements CommandLineRunner {
             crearControlCalidad(clasificacion1, null, "CC-2025-001", "VISUAL", "FIRMEZA", "8.5 lb", "7-9 lb", true);
             crearControlCalidad(clasificacion3, null, "CC-2025-002", "LABORATORIO", "BRIX", "14.2", "12-16", true);
 
-            // 11. Crear Pallets
-            Pallet pallet1 = crearPallet("PLT-2025-001", LocalDate.now().minusDays(1), "EPAL", 80, 800.0, "Mango", "PRIMERA", "Estados Unidos");
-            Pallet pallet2 = crearPallet("PLT-2025-002", LocalDate.now(), "AMERICANO", 100, 1050.0, "Banano", "PREMIUM", "España");
-            Pallet pallet3 = crearPallet("PLT-2025-003", LocalDate.now(), "EPAL", 85, 850.0, "Mango", "PRIMERA", "Estados Unidos");
+            // 11. Crear Pallets (ahora con empresa para multitenant)
+            Pallet pallet1 = crearPallet(empresa1, "PLT-2025-001", LocalDate.now().minusDays(1), "EPAL", 80, 800.0, "Mango", "PRIMERA", "Estados Unidos");
+            Pallet pallet2 = crearPallet(empresa1, "PLT-2025-002", LocalDate.now(), "AMERICANO", 100, 1050.0, "Banano", "PREMIUM", "España");
+            Pallet pallet3 = crearPallet(empresa1, "PLT-2025-003", LocalDate.now(), "EPAL", 85, 850.0, "Mango", "PRIMERA", "Estados Unidos");
 
             // 12. Crear Control de Calidad sobre Pallets
             crearControlCalidad(null, pallet1, "CC-2025-003", "EMPAQUE", "PESO_PALLET", "802 kg", "800 kg", true);
@@ -394,9 +397,10 @@ public class DataSeeder implements CommandLineRunner {
         return control;
     }
 
-    private Pallet crearPallet(String codigo, LocalDate fecha, String tipo, int numeroCajas,
+    private Pallet crearPallet(Empresa empresa, String codigo, LocalDate fecha, String tipo, int numeroCajas,
                               double pesoNeto, String tipoFruta, String calidad, String destino) {
         Pallet pallet = Pallet.builder()
+                .empresa(empresa)  // Asignar empresa para multitenant
                 .codigoPallet(codigo)
                 .fechaPaletizado(fecha)
                 .tipoPallet(tipo)
@@ -413,7 +417,7 @@ public class DataSeeder implements CommandLineRunner {
                 .activo(true)
                 .build();
         pallet = palletRepository.save(pallet);
-        log.debug("✓ Pallet creado: {} - {} cajas", codigo, numeroCajas);
+        log.debug("✓ Pallet creado: {} - {} cajas (Empresa: {})", codigo, numeroCajas, empresa.getRazonSocial());
         return pallet;
     }
 

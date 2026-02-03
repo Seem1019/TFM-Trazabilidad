@@ -40,9 +40,11 @@ export const dashboardService = {
       ]);
 
       const fincasActivas = fincas.filter((f) => f.activo).length;
-      const lotesEnProduccion = lotes.filter((l) => l.estadoLote === 'EN_PRODUCCION').length;
+      // Incluir lotes activos y en producción
+      const lotesEnProduccion = lotes.filter((l) => l.activo && (l.estadoLote === 'ACTIVO' || l.estadoLote === 'EN_PRODUCCION')).length;
+      // Incluir pallets armados, preparados y listos para envío
       const palletsPreparados = pallets.filter(
-        (p) => p.estadoPallet === 'PREPARADO' || p.estadoPallet === 'LISTO_ENVIO'
+        (p) => p.estadoPallet === 'ARMADO' || p.estadoPallet === 'PREPARADO' || p.estadoPallet === 'LISTO_ENVIO'
       ).length;
       const enviosEnTransito = envios.filter((e) => e.estado === 'EN_TRANSITO').length;
 

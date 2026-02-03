@@ -91,7 +91,7 @@ export interface Etiqueta extends Omit<EtiquetaRequest, 'clasificacionId'> {
 }
 
 // ==================== PALLET ====================
-export type EstadoPallet = 'PREPARADO' | 'LISTO_ENVIO' | 'ENVIADO' | 'ENTREGADO' | 'RECHAZADO';
+export type EstadoPallet = 'ARMADO' | 'EN_CAMARA' | 'ASIGNADO_ENVIO' | 'DESPACHADO' | 'PREPARADO' | 'LISTO_ENVIO' | 'ENVIADO' | 'ENTREGADO' | 'RECHAZADO';
 
 export interface PalletRequest {
   codigoPallet: string;
@@ -170,6 +170,10 @@ export const RESULTADOS_CONTROL = ['APROBADO', 'RECHAZADO', 'CONDICIONAL'] as co
 export const ESTADOS_RECEPCION = ['PENDIENTE', 'ACEPTADA', 'RECHAZADA', 'CLASIFICADA'] as const;
 
 export const ESTADOS_PALLET = [
+  'ARMADO',
+  'EN_CAMARA',
+  'ASIGNADO_ENVIO',
+  'DESPACHADO',
   'PREPARADO',
   'LISTO_ENVIO',
   'ENVIADO',

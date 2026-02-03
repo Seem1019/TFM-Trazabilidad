@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Sprout, MoreHorizontal, Calendar, Layers } from 'lucide-react';
 import { actividadService, loteService } from '@/services';
 import { useFetch } from '@/hooks/useFetch';
+import { usePermissions } from '@/hooks/usePermissions';
 import type { ActividadAgronomica, ActividadAgronomicarRequest, Lote } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { DataTable, type Column, PageLoader } from '@/components/shared';
+import { DataTable, type Column, PageLoader, PermissionGate } from '@/components/shared';
 import { ActividadFormDialog } from './components/ActividadFormDialog';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -43,6 +44,8 @@ export function ActividadesPage() {
     useCallback(() => loteService.getAll(), []),
     []
   );
+
+  const { canUpdate, canDelete } = usePermissions();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedActividad, setSelectedActividad] = useState<ActividadAgronomica | null>(null);
@@ -206,11 +209,12 @@ export function ActividadesPage() {
       header: 'Responsable',
       render: (act) => act.responsable || '-',
     },
-    {
-      key: 'actions',
+    // Solo mostrar columna de acciones si el usuario tiene permisos
+    ...(canUpdate('actividades') || canDelete('actividades') ? [{
+      key: 'actions' as keyof ActividadAgronomica,
       header: '',
       className: 'w-[50px]',
-      render: (act) => (
+      render: (act: ActividadAgronomica) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -218,21 +222,25 @@ export function ActividadesPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleEdit(act)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => setDeleteId(act.id)}
-              className="text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Eliminar
-            </DropdownMenuItem>
+            {canUpdate('actividades') && (
+              <DropdownMenuItem onClick={() => handleEdit(act)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar
+              </DropdownMenuItem>
+            )}
+            {canDelete('actividades') && (
+              <DropdownMenuItem
+                onClick={() => setDeleteId(act.id)}
+                className="text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
-    },
+    }] : []),
   ];
 
   if (isLoadingLotes) {
@@ -259,10 +267,12 @@ export function ActividadesPage() {
             Gestione las actividades de mantenimiento de sus cultivos
           </p>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nueva Actividad
-        </Button>
+        <PermissionGate module="actividades" permission="create">
+          <Button onClick={handleCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nueva Actividad
+          </Button>
+        </PermissionGate>
       </div>
 
       {/* Selector de Lote */}

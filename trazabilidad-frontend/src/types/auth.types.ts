@@ -25,14 +25,29 @@ export interface LoginResponse {
   success: boolean;
   message: string;
   data: {
-    token: string;
+    accessToken: string;
+    refreshToken: string;
+    tokenType?: string;
+    expiresIn?: number;
     user: User;
   };
+}
+
+export interface TokenRefreshRequest {
+  refreshToken: string;
+}
+
+export interface TokenRefreshResponse {
+  accessToken: string;
+  refreshToken: string;
+  tokenType: string;
+  expiresIn: number;
 }
 
 export interface AuthState {
   user: User | null;
   token: string | null;
+  refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;

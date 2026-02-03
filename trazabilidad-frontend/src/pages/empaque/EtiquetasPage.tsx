@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Tags, MoreHorizontal, QrCode, ExternalLink } from 'lucide-react';
 import { etiquetaService, clasificacionService } from '@/services';
 import { useFetch } from '@/hooks/useFetch';
+import { usePermissions } from '@/hooks/usePermissions';
 import type { Etiqueta, EtiquetaRequest, Clasificacion } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,7 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { DataTable, type Column, PageLoader } from '@/components/shared';
+import { DataTable, type Column, PageLoader, PermissionGate } from '@/components/shared';
 import { EtiquetaFormDialog } from './components/EtiquetaFormDialog';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -46,6 +47,8 @@ export function EtiquetasPage() {
     useCallback(() => clasificacionService.getAll(), []),
     []
   );
+
+  const { canUpdate, canDelete } = usePermissions();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedEtiqueta, setSelectedEtiqueta] = useState<Etiqueta | null>(null);
@@ -200,15 +203,19 @@ export function EtiquetasPage() {
               <QrCode className="mr-2 h-4 w-4" />
               Ver QR
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => handleEdit(etq)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setDeleteId(etq.id)} className="text-destructive">
-              <Trash2 className="mr-2 h-4 w-4" />
-              Eliminar
-            </DropdownMenuItem>
+            {(canUpdate('etiquetas') || canDelete('etiquetas')) && <DropdownMenuSeparator />}
+            {canUpdate('etiquetas') && (
+              <DropdownMenuItem onClick={() => handleEdit(etq)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar
+              </DropdownMenuItem>
+            )}
+            {canDelete('etiquetas') && (
+              <DropdownMenuItem onClick={() => setDeleteId(etq.id)} className="text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -240,10 +247,12 @@ export function EtiquetasPage() {
             Gestione las etiquetas y códigos QR para trazabilidad
           </p>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nueva Etiqueta
-        </Button>
+        <PermissionGate module="etiquetas" permission="create">
+          <Button onClick={handleCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nueva Etiqueta
+          </Button>
+        </PermissionGate>
       </div>
 
       {etiquetas && etiquetas.length === 0 ? (

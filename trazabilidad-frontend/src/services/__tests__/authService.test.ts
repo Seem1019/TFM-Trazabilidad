@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { authService } from '../authService';
 
+// Mock api module
+vi.mock('../api', () => ({
+  default: {
+    post: vi.fn(() => Promise.resolve({ data: {} })),
+    get: vi.fn(() => Promise.resolve({ data: {} })),
+  },
+}));
+
 // Mock localStorage
 const localStorageMock = (() => {
   let store: Record<string, string> = {};
@@ -33,13 +41,15 @@ describe('authService', () => {
   });
 
   describe('logout', () => {
-    it('should remove token and user from localStorage', () => {
+    it('should remove token, refreshToken and user from localStorage', async () => {
       localStorageMock.setItem('token', 'test-token');
+      localStorageMock.setItem('refreshToken', 'test-refresh-token');
       localStorageMock.setItem('user', JSON.stringify({ id: 1, name: 'Test' }));
 
-      authService.logout();
+      await authService.logout();
 
       expect(localStorageMock.removeItem).toHaveBeenCalledWith('token');
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('refreshToken');
       expect(localStorageMock.removeItem).toHaveBeenCalledWith('user');
     });
   });
@@ -94,14 +104,56 @@ describe('authService', () => {
   });
 
   describe('setAuthData', () => {
-    it('should store token and user in localStorage', () => {
-      const token = 'new-token';
+    it('should store token, refreshToken and user in localStorage', () => {
+      const accessToken = 'new-access-token';
+      const refreshToken = 'new-refresh-token';
       const user = { id: 2, email: 'user@test.com', nombre: 'User' };
 
-      authService.setAuthData(token, user as any);
+      authService.setAuthData(accessToken, refreshToken, user as any);
 
-      expect(localStorageMock.setItem).toHaveBeenCalledWith('token', token);
+      expect(localStorageMock.setItem).toHaveBeenCalledWith('token', accessToken);
+      expect(localStorageMock.setItem).toHaveBeenCalledWith('refreshToken', refreshToken);
       expect(localStorageMock.setItem).toHaveBeenCalledWith('user', JSON.stringify(user));
+    });
+  });
+
+  describe('getStoredRefreshToken', () => {
+    it('should return refreshToken when it exists', () => {
+      localStorageMock.getItem.mockReturnValueOnce('my-refresh-token');
+
+      expect(authService.getStoredRefreshToken()).toBe('my-refresh-token');
+    });
+
+    it('should return null when refreshToken does not exist', () => {
+      localStorageMock.getItem.mockReturnValueOnce(null);
+
+      expect(authService.getStoredRefreshToken()).toBe(null);
+    });
+  });
+
+  describe('updateTokens', () => {
+    it('should update both tokens in localStorage', () => {
+      const accessToken = 'updated-access-token';
+      const refreshToken = 'updated-refresh-token';
+
+      authService.updateTokens(accessToken, refreshToken);
+
+      expect(localStorageMock.setItem).toHaveBeenCalledWith('token', accessToken);
+      expect(localStorageMock.setItem).toHaveBeenCalledWith('refreshToken', refreshToken);
+    });
+  });
+
+  describe('clearAuthData', () => {
+    it('should remove all auth data from localStorage', () => {
+      localStorageMock.setItem('token', 'test-token');
+      localStorageMock.setItem('refreshToken', 'test-refresh-token');
+      localStorageMock.setItem('user', JSON.stringify({ id: 1 }));
+
+      authService.clearAuthData();
+
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('token');
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('refreshToken');
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('user');
     });
   });
 });

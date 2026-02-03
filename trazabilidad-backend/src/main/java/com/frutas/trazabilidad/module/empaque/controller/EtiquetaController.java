@@ -11,6 +11,7 @@ import com.frutas.trazabilidad.service.TrazabilidadService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +19,7 @@ import java.util.List;
 
 /**
  * Controller REST para gestión de etiquetas con QR.
+ * RBAC: ADMIN=CRUD, PRODUCTOR=R, OPERADOR_PLANTA=CRU, LOGISTICA=R, AUDITOR=R
  */
 @RestController
 @RequestMapping("/api/etiquetas")
@@ -28,6 +30,7 @@ public class EtiquetaController {
     private final TrazabilidadService trazabilidadService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<EtiquetaResponse>>> listar(
             @AuthenticationPrincipal User user) {
         List<EtiquetaResponse> etiquetas = etiquetaService.listarPorEmpresa(user.getEmpresa().getId());
@@ -35,6 +38,7 @@ public class EtiquetaController {
     }
 
     @GetMapping("/clasificacion/{clasificacionId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<EtiquetaResponse>>> listarPorClasificacion(
             @PathVariable Long clasificacionId,
             @AuthenticationPrincipal User user) {
@@ -43,6 +47,7 @@ public class EtiquetaController {
     }
 
     @GetMapping("/estado/{estado}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<EtiquetaResponse>>> listarPorEstado(
             @PathVariable String estado,
             @AuthenticationPrincipal User user) {
@@ -51,6 +56,7 @@ public class EtiquetaController {
     }
 
     @GetMapping("/tipo/{tipo}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<EtiquetaResponse>>> listarPorTipo(
             @PathVariable String tipo,
             @AuthenticationPrincipal User user) {
@@ -59,6 +65,7 @@ public class EtiquetaController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<EtiquetaResponse>> obtenerPorId(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {
@@ -67,6 +74,7 @@ public class EtiquetaController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_PLANTA')")
     public ResponseEntity<ApiResponse<EtiquetaResponse>> crear(
             @Valid @RequestBody EtiquetaRequest request,
             @AuthenticationPrincipal User user) {
@@ -75,6 +83,7 @@ public class EtiquetaController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_PLANTA')")
     public ResponseEntity<ApiResponse<EtiquetaResponse>> actualizar(
             @PathVariable Long id,
             @Valid @RequestBody EtiquetaRequest request,
@@ -84,6 +93,7 @@ public class EtiquetaController {
     }
 
     @PatchMapping("/{id}/estado")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_PLANTA')")
     public ResponseEntity<ApiResponse<EtiquetaResponse>> cambiarEstado(
             @PathVariable Long id,
             @RequestParam String estado,
@@ -93,6 +103,7 @@ public class EtiquetaController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> eliminar(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {
@@ -118,6 +129,7 @@ public class EtiquetaController {
      * Retorna información completa incluyendo datos sensibles.
      */
     @GetMapping("/{id}/trazabilidad")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<TrazabilidadCompletaDTO>> consultarTrazabilidadCompleta(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {

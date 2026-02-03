@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,6 +18,7 @@ import java.util.List;
 
 /**
  * Controller REST para gestión de controles de calidad.
+ * RBAC: ADMIN=CRUD, PRODUCTOR=R, OPERADOR_PLANTA=CRU*, LOGISTICA=R, AUDITOR=R
  */
 @RestController
 @RequestMapping("/api/controles-calidad")
@@ -26,6 +28,7 @@ public class ControlCalidadController {
     private final ControlCalidadService controlService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<ControlCalidadResponse>>> listar(
             @AuthenticationPrincipal User user) {
         List<ControlCalidadResponse> controles = controlService.listarPorEmpresa(user.getEmpresa().getId());
@@ -33,6 +36,7 @@ public class ControlCalidadController {
     }
 
     @GetMapping("/clasificacion/{clasificacionId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<ControlCalidadResponse>>> listarPorClasificacion(
             @PathVariable Long clasificacionId,
             @AuthenticationPrincipal User user) {
@@ -41,6 +45,7 @@ public class ControlCalidadController {
     }
 
     @GetMapping("/pallet/{palletId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<ControlCalidadResponse>>> listarPorPallet(
             @PathVariable Long palletId) {
         List<ControlCalidadResponse> controles = controlService.listarPorPallet(palletId);
@@ -48,6 +53,7 @@ public class ControlCalidadController {
     }
 
     @GetMapping("/tipo/{tipo}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<ControlCalidadResponse>>> listarPorTipo(
             @PathVariable String tipo,
             @AuthenticationPrincipal User user) {
@@ -56,6 +62,7 @@ public class ControlCalidadController {
     }
 
     @GetMapping("/resultado/{resultado}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<ControlCalidadResponse>>> listarPorResultado(
             @PathVariable String resultado,
             @AuthenticationPrincipal User user) {
@@ -64,6 +71,7 @@ public class ControlCalidadController {
     }
 
     @GetMapping("/rango-fechas")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<ControlCalidadResponse>>> listarPorRangoFechas(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
@@ -74,6 +82,7 @@ public class ControlCalidadController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<ControlCalidadResponse>> obtenerPorId(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {
@@ -82,6 +91,7 @@ public class ControlCalidadController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_PLANTA')")
     public ResponseEntity<ApiResponse<ControlCalidadResponse>> crear(
             @Valid @RequestBody ControlCalidadRequest request,
             @AuthenticationPrincipal User user) {
@@ -90,6 +100,7 @@ public class ControlCalidadController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_PLANTA')")
     public ResponseEntity<ApiResponse<ControlCalidadResponse>> actualizar(
             @PathVariable Long id,
             @Valid @RequestBody ControlCalidadRequest request,
@@ -99,6 +110,7 @@ public class ControlCalidadController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> eliminar(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {

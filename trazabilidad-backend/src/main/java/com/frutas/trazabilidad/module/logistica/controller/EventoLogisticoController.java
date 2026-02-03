@@ -75,7 +75,7 @@ public class EventoLogisticoController {
 
     @GetMapping("/envio/{envioId}")
     @Operation(summary = "Listar eventos por envío", description = "Lista todos los eventos de un envío")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_LOGISTICA', 'AUDITOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<EventoLogisticoResponse>>> listarPorEnvio(
             @PathVariable Long envioId,
             @AuthenticationPrincipal User user) {
@@ -86,7 +86,7 @@ public class EventoLogisticoController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener evento por ID", description = "Obtiene los detalles de un evento")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_LOGISTICA', 'AUDITOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<EventoLogisticoResponse>> obtenerPorId(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {

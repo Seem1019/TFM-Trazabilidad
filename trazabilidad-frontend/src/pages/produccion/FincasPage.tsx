@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, MapPin, MoreHorizontal } from 'lucide-react';
 import { fincaService } from '@/services';
 import { useFetch } from '@/hooks/useFetch';
+import { usePermissions } from '@/hooks/usePermissions';
 import type { Finca, FincaRequest } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { DataTable, type Column, PageLoader } from '@/components/shared';
+import { DataTable, type Column, PageLoader, PermissionGate } from '@/components/shared';
 import { FincaFormDialog } from './components/FincaFormDialog';
 
 export function FincasPage() {
@@ -30,6 +31,7 @@ export function FincasPage() {
     useCallback(() => fincaService.getAll(), []),
     []
   );
+  const { canUpdate, canDelete } = usePermissions();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedFinca, setSelectedFinca] = useState<Finca | null>(null);
@@ -131,11 +133,12 @@ export function FincasPage() {
         </Badge>
       ),
     },
-    {
-      key: 'actions',
+    // Solo mostrar columna de acciones si el usuario tiene permisos
+    ...(canUpdate('fincas') || canDelete('fincas') ? [{
+      key: 'actions' as keyof Finca,
       header: '',
       className: 'w-[50px]',
-      render: (finca) => (
+      render: (finca: Finca) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -143,21 +146,25 @@ export function FincasPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleEdit(finca)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => setDeleteId(finca.id)}
-              className="text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Eliminar
-            </DropdownMenuItem>
+            {canUpdate('fincas') && (
+              <DropdownMenuItem onClick={() => handleEdit(finca)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar
+              </DropdownMenuItem>
+            )}
+            {canDelete('fincas') && (
+              <DropdownMenuItem
+                onClick={() => setDeleteId(finca.id)}
+                className="text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
-    },
+    }] : []),
   ];
 
   if (isLoading) {
@@ -182,10 +189,12 @@ export function FincasPage() {
             Gestione las fincas productoras de su empresa
           </p>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nueva Finca
-        </Button>
+        <PermissionGate module="fincas" permission="create">
+          <Button onClick={handleCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nueva Finca
+          </Button>
+        </PermissionGate>
       </div>
 
       <DataTable

@@ -50,7 +50,7 @@ public class FincaController {
 
     @PostMapping
     @Operation(summary = "Crear finca", description = "Crea una nueva finca en la empresa")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<FincaResponse>> crear(
             @Valid @RequestBody FincaRequest request,
             @AuthenticationPrincipal User user) {
@@ -61,7 +61,7 @@ public class FincaController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar finca", description = "Actualiza los datos de una finca existente")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<FincaResponse>> actualizar(
             @PathVariable Long id,
             @Valid @RequestBody FincaRequest request,

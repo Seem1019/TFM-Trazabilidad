@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { documentoExportacionService, envioService } from '@/services';
 import { useFetch } from '@/hooks/useFetch';
+import { usePermissions } from '@/hooks/usePermissions';
 import type { DocumentoExportacion, DocumentoExportacionRequest, Envio } from '@/types';
 import { TIPO_DOCUMENTO_LABELS } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -44,7 +45,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { DataTable, type Column, PageLoader } from '@/components/shared';
+import { DataTable, type Column, PageLoader, PermissionGate } from '@/components/shared';
 import { DocumentoFormDialog } from './components/DocumentoFormDialog';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -76,6 +77,8 @@ export function DocumentosPage() {
     ),
     [selectedEnvioId]
   );
+
+  const { canUpdate, canDelete } = usePermissions();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedDocumento, setSelectedDocumento] = useState<DocumentoExportacion | null>(null);
@@ -272,11 +275,12 @@ export function DocumentosPage() {
         </Badge>
       ),
     },
-    {
-      key: 'actions',
+    // Solo mostrar columna de acciones si el usuario tiene permisos
+    ...(canUpdate('documentos') || canDelete('documentos') ? [{
+      key: 'actions' as keyof DocumentoExportacion,
       header: '',
       className: 'w-[50px]',
-      render: (doc) => (
+      render: (doc: DocumentoExportacion) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -284,37 +288,45 @@ export function DocumentosPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleEdit(doc)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            {doc.estado === 'PENDIENTE' && (
+            {canUpdate('documentos') && (
               <>
-                <DropdownMenuItem onClick={() => handleCambiarEstado(doc.id, 'APROBADO')}>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Aprobar
+                <DropdownMenuItem onClick={() => handleEdit(doc)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Editar
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleCambiarEstado(doc.id, 'RECHAZADO')}>
-                  <XCircle className="mr-2 h-4 w-4" />
-                  Rechazar
+                <DropdownMenuSeparator />
+                {doc.estado === 'PENDIENTE' && (
+                  <>
+                    <DropdownMenuItem onClick={() => handleCambiarEstado(doc.id, 'APROBADO')}>
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Aprobar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleCambiarEstado(doc.id, 'RECHAZADO')}>
+                      <XCircle className="mr-2 h-4 w-4" />
+                      Rechazar
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {doc.estado === 'RECHAZADO' && (
+                  <DropdownMenuItem onClick={() => handleCambiarEstado(doc.id, 'PENDIENTE')}>
+                    Volver a Pendiente
+                  </DropdownMenuItem>
+                )}
+              </>
+            )}
+            {canDelete('documentos') && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setDeleteId(doc.id)} className="text-destructive">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Eliminar
                 </DropdownMenuItem>
               </>
             )}
-            {doc.estado === 'RECHAZADO' && (
-              <DropdownMenuItem onClick={() => handleCambiarEstado(doc.id, 'PENDIENTE')}>
-                Volver a Pendiente
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setDeleteId(doc.id)} className="text-destructive">
-              <Trash2 className="mr-2 h-4 w-4" />
-              Eliminar
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
-    },
+    }] : []),
   ];
 
   if (loadingEnvios) {
@@ -335,10 +347,12 @@ export function DocumentosPage() {
             Gestione los documentos requeridos para la exportación
           </p>
         </div>
-        <Button onClick={handleCreate} disabled={!selectedEnvioId}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nuevo Documento
-        </Button>
+        <PermissionGate module="documentos" permission="create">
+          <Button onClick={handleCreate} disabled={!selectedEnvioId}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo Documento
+          </Button>
+        </PermissionGate>
       </div>
 
       {/* Selector de Envío */}

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { controlCalidadService, clasificacionService, palletService } from '@/services';
 import { useFetch } from '@/hooks/useFetch';
+import { usePermissions } from '@/hooks/usePermissions';
 import type { ControlCalidad, ControlCalidadRequest, Clasificacion, Pallet } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,7 +33,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { DataTable, type Column, PageLoader } from '@/components/shared';
+import { DataTable, type Column, PageLoader, PermissionGate } from '@/components/shared';
 import { ControlCalidadFormDialog } from './components/ControlCalidadFormDialog';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -54,6 +55,8 @@ export function ControlCalidadPage() {
     useCallback(() => palletService.getAll(), []),
     []
   );
+
+  const { canUpdate, canDelete } = usePermissions();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedControl, setSelectedControl] = useState<ControlCalidad | null>(null);
@@ -214,11 +217,12 @@ export function ControlCalidadPage() {
         <span className="max-w-[100px] truncate block">{ctrl.responsableControl}</span>
       ),
     },
-    {
-      key: 'actions',
+    // Solo mostrar columna de acciones si el usuario tiene permisos
+    ...(canUpdate('control-calidad') || canDelete('control-calidad') ? [{
+      key: 'actions' as keyof ControlCalidad,
       header: '',
       className: 'w-[50px]',
-      render: (ctrl) => (
+      render: (ctrl: ControlCalidad) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -226,18 +230,22 @@ export function ControlCalidadPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleEdit(ctrl)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setDeleteId(ctrl.id)} className="text-destructive">
-              <Trash2 className="mr-2 h-4 w-4" />
-              Eliminar
-            </DropdownMenuItem>
+            {canUpdate('control-calidad') && (
+              <DropdownMenuItem onClick={() => handleEdit(ctrl)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar
+              </DropdownMenuItem>
+            )}
+            {canDelete('control-calidad') && (
+              <DropdownMenuItem onClick={() => setDeleteId(ctrl.id)} className="text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
-    },
+    }] : []),
   ];
 
   if (isLoading) {
@@ -267,10 +275,12 @@ export function ControlCalidadPage() {
             Gestione los controles de calidad de productos
           </p>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nuevo Control
-        </Button>
+        <PermissionGate module="control-calidad" permission="create">
+          <Button onClick={handleCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo Control
+          </Button>
+        </PermissionGate>
       </div>
 
       {/* Estadísticas */}

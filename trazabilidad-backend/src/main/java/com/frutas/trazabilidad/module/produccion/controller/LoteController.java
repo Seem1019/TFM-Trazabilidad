@@ -31,7 +31,7 @@ public class LoteController {
 
     @GetMapping
     @Operation(summary = "Listar todos los lotes", description = "Obtiene todos los lotes de la empresa")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'AUDITOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<LoteResponse>>> listar(
             @AuthenticationPrincipal User user) {
         List<LoteResponse> lotes = loteService.listarPorEmpresa(user.getEmpresa().getId());
@@ -40,7 +40,7 @@ public class LoteController {
 
     @GetMapping("/finca/{fincaId}")
     @Operation(summary = "Listar lotes por finca", description = "Obtiene todos los lotes de una finca específica")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'AUDITOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<LoteResponse>>> listarPorFinca(
             @PathVariable Long fincaId,
             @AuthenticationPrincipal User user) {
@@ -50,7 +50,7 @@ public class LoteController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener lote por ID", description = "Obtiene los detalles de un lote específico")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'AUDITOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<LoteResponse>> obtenerPorId(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {
@@ -92,7 +92,7 @@ public class LoteController {
 
     @GetMapping("/listos-cosechar")
     @Operation(summary = "Lotes listos para cosechar", description = "Obtiene los lotes que están listos para cosechar")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<LoteResponse>>> listosParaCosechar(
             @AuthenticationPrincipal User user) {
         List<LoteResponse> lotes = loteService.listarListosParaCosechar(user.getEmpresa().getId());

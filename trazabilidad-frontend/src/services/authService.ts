@@ -1,5 +1,10 @@
 import api from './api';
-import type { LoginRequest, LoginResponse, PasswordResetRequest, User } from '@/types';
+import type { LoginRequest, LoginResponse, PasswordResetRequest, User, TokenRefreshResponse } from '@/types';
+
+// Claves de localStorage
+const TOKEN_KEY = 'token';
+const REFRESH_TOKEN_KEY = 'refreshToken';
+const USER_KEY = 'user';
 
 export const authService = {
   login: async (credentials: LoginRequest): Promise<LoginResponse> => {
@@ -7,9 +12,22 @@ export const authService = {
     return response.data;
   },
 
-  logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  logout: async (): Promise<void> => {
+    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+
+    // Intentar logout en el servidor para revocar el refresh token
+    if (refreshToken) {
+      try {
+        await api.post('/auth/logout', { refreshToken });
+      } catch {
+        // Ignorar errores de logout - limpiar localmente de todas formas
+      }
+    }
+
+    // Limpiar localStorage
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
   },
 
   getCurrentUser: async (): Promise<User> => {
@@ -25,12 +43,17 @@ export const authService = {
     await api.post('/auth/reset-password', { token, newPassword });
   },
 
+  refreshToken: async (refreshToken: string): Promise<TokenRefreshResponse> => {
+    const response = await api.post<TokenRefreshResponse>('/auth/refresh', { refreshToken });
+    return response.data;
+  },
+
   isAuthenticated: (): boolean => {
-    return !!localStorage.getItem('token');
+    return !!localStorage.getItem(TOKEN_KEY);
   },
 
   getStoredUser: (): User | null => {
-    const userStr = localStorage.getItem('user');
+    const userStr = localStorage.getItem(USER_KEY);
     if (userStr) {
       try {
         return JSON.parse(userStr) as User;
@@ -42,12 +65,28 @@ export const authService = {
   },
 
   getStoredToken: (): string | null => {
-    return localStorage.getItem('token');
+    return localStorage.getItem(TOKEN_KEY);
   },
 
-  setAuthData: (token: string, user: User): void => {
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
+  getStoredRefreshToken: (): string | null => {
+    return localStorage.getItem(REFRESH_TOKEN_KEY);
+  },
+
+  setAuthData: (accessToken: string, refreshToken: string, user: User): void => {
+    localStorage.setItem(TOKEN_KEY, accessToken);
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  },
+
+  updateTokens: (accessToken: string, refreshToken: string): void => {
+    localStorage.setItem(TOKEN_KEY, accessToken);
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  },
+
+  clearAuthData: (): void => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
   },
 };
 

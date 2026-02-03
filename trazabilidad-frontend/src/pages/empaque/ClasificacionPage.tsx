@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Package, MoreHorizontal, Calendar, Scale } from 'lucide-react';
 import { clasificacionService, recepcionService } from '@/services';
 import { useFetch } from '@/hooks/useFetch';
+import { usePermissions } from '@/hooks/usePermissions';
 import type { Clasificacion, ClasificacionRequest, RecepcionPlanta } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { DataTable, type Column, PageLoader } from '@/components/shared';
+import { DataTable, type Column, PageLoader, PermissionGate } from '@/components/shared';
 import { ClasificacionFormDialog } from './components/ClasificacionFormDialog';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -39,6 +40,8 @@ export function ClasificacionPage() {
     useCallback(() => recepcionService.getAll(), []),
     []
   );
+
+  const { canUpdate, canDelete } = usePermissions();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedClasificacion, setSelectedClasificacion] = useState<Clasificacion | null>(null);
@@ -173,11 +176,12 @@ export function ClasificacionPage() {
       header: 'Etiquetas',
       render: (cla) => <Badge variant="outline">{cla.totalEtiquetas}</Badge>,
     },
-    {
-      key: 'actions',
+    // Solo mostrar columna de acciones si el usuario tiene permisos
+    ...(canUpdate('clasificacion') || canDelete('clasificacion') ? [{
+      key: 'actions' as keyof Clasificacion,
       header: '',
       className: 'w-[50px]',
-      render: (cla) => (
+      render: (cla: Clasificacion) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -185,18 +189,22 @@ export function ClasificacionPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleEdit(cla)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setDeleteId(cla.id)} className="text-destructive">
-              <Trash2 className="mr-2 h-4 w-4" />
-              Eliminar
-            </DropdownMenuItem>
+            {canUpdate('clasificacion') && (
+              <DropdownMenuItem onClick={() => handleEdit(cla)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar
+              </DropdownMenuItem>
+            )}
+            {canDelete('clasificacion') && (
+              <DropdownMenuItem onClick={() => setDeleteId(cla.id)} className="text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
-    },
+    }] : []),
   ];
 
   if (isLoading) {
@@ -221,10 +229,12 @@ export function ClasificacionPage() {
             Gestione la clasificación de fruta por calidad y calibre
           </p>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nueva Clasificación
-        </Button>
+        <PermissionGate module="clasificacion" permission="create">
+          <Button onClick={handleCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nueva Clasificación
+          </Button>
+        </PermissionGate>
       </div>
 
       {clasificaciones && clasificaciones.length === 0 ? (

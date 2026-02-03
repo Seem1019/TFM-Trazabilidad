@@ -16,6 +16,9 @@ import java.lang.reflect.Field;
 /**
  * Listener JPA para auditoría automática de entidades críticas.
  * Se activa en operaciones de persistencia, actualización y eliminación.
+ *
+ * NOTA: Para evitar ConcurrentModificationException, las entidades de tipo
+ * AuditoriaEvento y User se excluyen de la auditoría automática.
  */
 @Component
 @Slf4j
@@ -30,8 +33,28 @@ public class AuditEntityListener {
         AuditEntityListener.userRepository = userRepository;
     }
 
+    /**
+     * Verifica si la entidad debe ser excluida de la auditoría automática
+     * para evitar recursión infinita o ConcurrentModificationException.
+     *
+     * NOTA: User se excluye porque los JPA listeners no pueden usar @Async correctamente
+     * (Spring no intercepta las llamadas dentro del contexto de Hibernate).
+     * La auditoría de usuarios se maneja manualmente en UserService.
+     */
+    private boolean debeExcluirDeAuditoria(Object entity) {
+        String className = entity.getClass().getSimpleName();
+        // Excluir entidades que causan problemas
+        return className.equals("AuditoriaEvento") ||
+               className.equals("RefreshToken") ||
+               className.equals("User");
+    }
+
     @PostPersist
     public void onPostPersist(Object entity) {
+        if (debeExcluirDeAuditoria(entity)) {
+            return;
+        }
+
         try {
             User usuario = obtenerUsuarioActual();
             if (usuario == null) {
@@ -41,12 +64,13 @@ public class AuditEntityListener {
 
             AuditInfo info = extraerInfoEntidad(entity);
 
-            auditoriaService.registrarCreacion(
+            // Usar método asíncrono para evitar ConcurrentModificationException
+            auditoriaService.registrarCreacionAsync(
                     info.tipoEntidad,
                     info.id,
                     info.codigo,
                     "Creación de " + info.tipoEntidad.toLowerCase() + ": " + info.codigo,
-                    usuario
+                    usuario.getId()
             );
 
             log.debug("Auditoría automática: CREATE {} ID:{}", info.tipoEntidad, info.id);
@@ -57,6 +81,10 @@ public class AuditEntityListener {
 
     @PostUpdate
     public void onPostUpdate(Object entity) {
+        if (debeExcluirDeAuditoria(entity)) {
+            return;
+        }
+
         try {
             User usuario = obtenerUsuarioActual();
             if (usuario == null) {
@@ -66,14 +94,14 @@ public class AuditEntityListener {
 
             AuditInfo info = extraerInfoEntidad(entity);
 
-            auditoriaService.registrarActualizacion(
+            auditoriaService.registrarActualizacionAsync(
                     info.tipoEntidad,
                     info.id,
                     info.codigo,
                     "Actualización de " + info.tipoEntidad.toLowerCase() + ": " + info.codigo,
                     null,
                     capturarEstadoActual(entity),
-                    usuario
+                    usuario.getId()
             );
 
             log.debug("Auditoría automática: UPDATE {} ID:{}", info.tipoEntidad, info.id);
@@ -84,6 +112,10 @@ public class AuditEntityListener {
 
     @PreRemove
     public void onPreRemove(Object entity) {
+        if (debeExcluirDeAuditoria(entity)) {
+            return;
+        }
+
         try {
             User usuario = obtenerUsuarioActual();
             if (usuario == null) {
@@ -93,12 +125,12 @@ public class AuditEntityListener {
 
             AuditInfo info = extraerInfoEntidad(entity);
 
-            auditoriaService.registrarEliminacion(
+            auditoriaService.registrarEliminacionAsync(
                     info.tipoEntidad,
                     info.id,
                     info.codigo,
                     "Eliminación de " + info.tipoEntidad.toLowerCase() + ": " + info.codigo,
-                    usuario
+                    usuario.getId()
             );
 
             log.debug("Auditoría automática: DELETE {} ID:{}", info.tipoEntidad, info.id);

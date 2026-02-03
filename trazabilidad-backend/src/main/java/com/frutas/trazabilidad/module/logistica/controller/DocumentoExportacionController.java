@@ -97,7 +97,7 @@ public class DocumentoExportacionController {
 
     @GetMapping("/envio/{envioId}")
     @Operation(summary = "Listar documentos por envío", description = "Lista todos los documentos de un envío")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_LOGISTICA', 'AUDITOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<DocumentoExportacionResponse>>> listarPorEnvio(
             @PathVariable Long envioId,
             @AuthenticationPrincipal User user) {
@@ -108,7 +108,7 @@ public class DocumentoExportacionController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener documento por ID", description = "Obtiene los detalles de un documento")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_LOGISTICA', 'AUDITOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<DocumentoExportacionResponse>> obtenerPorId(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {

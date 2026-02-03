@@ -7,9 +7,10 @@ vi.mock('@/services/authService', () => ({
   authService: {
     getStoredUser: vi.fn(() => null),
     getStoredToken: vi.fn(() => null),
+    getStoredRefreshToken: vi.fn(() => null),
     isAuthenticated: vi.fn(() => false),
     setAuthData: vi.fn(),
-    logout: vi.fn(),
+    logout: vi.fn(() => Promise.resolve()),
     login: vi.fn(),
   },
 }));
@@ -22,16 +23,19 @@ describe('authStore', () => {
     useAuthStore.setState({
       user: null,
       token: null,
+      refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
     });
+    vi.clearAllMocks();
   });
 
   it('should have initial state', () => {
     const state = useAuthStore.getState();
     expect(state.user).toBeNull();
     expect(state.token).toBeNull();
+    expect(state.refreshToken).toBeNull();
     expect(state.isAuthenticated).toBe(false);
     expect(state.isLoading).toBe(false);
     expect(state.error).toBeNull();
@@ -47,19 +51,21 @@ describe('authStore', () => {
     expect(state.error).toBeNull();
   });
 
-  it('should logout and clear state', () => {
+  it('should logout and clear state', async () => {
     useAuthStore.setState({
       user: { id: 1, email: 'test@test.com', nombre: 'Test', apellido: 'User', rol: 'ADMIN', empresaId: 1, activo: true },
       token: 'test-token',
+      refreshToken: 'test-refresh-token',
       isAuthenticated: true,
     });
 
     const { logout } = useAuthStore.getState();
-    logout();
+    await logout();
 
     const state = useAuthStore.getState();
     expect(state.user).toBeNull();
     expect(state.token).toBeNull();
+    expect(state.refreshToken).toBeNull();
     expect(state.isAuthenticated).toBe(false);
   });
 
@@ -92,11 +98,18 @@ describe('authStore', () => {
         empresaId: 1,
         activo: true,
       };
-      const mockToken = 'jwt-token';
+      const mockAccessToken = 'jwt-access-token';
+      const mockRefreshToken = 'jwt-refresh-token';
 
       mockedAuthService.login.mockResolvedValueOnce({
         success: true,
-        data: { user: mockUser, token: mockToken },
+        data: {
+          user: mockUser,
+          accessToken: mockAccessToken,
+          refreshToken: mockRefreshToken,
+          tokenType: 'Bearer',
+          expiresIn: 900,
+        },
         message: 'Success',
       });
 
@@ -106,10 +119,11 @@ describe('authStore', () => {
       expect(result).toBe(true);
       const state = useAuthStore.getState();
       expect(state.user).toEqual(mockUser);
-      expect(state.token).toBe(mockToken);
+      expect(state.token).toBe(mockAccessToken);
+      expect(state.refreshToken).toBe(mockRefreshToken);
       expect(state.isAuthenticated).toBe(true);
       expect(state.isLoading).toBe(false);
-      expect(mockedAuthService.setAuthData).toHaveBeenCalledWith(mockToken, mockUser);
+      expect(mockedAuthService.setAuthData).toHaveBeenCalledWith(mockAccessToken, mockRefreshToken, mockUser);
     });
 
     it('should handle login failure with success=false', async () => {
@@ -182,7 +196,11 @@ describe('authStore', () => {
 
       resolveLogin!({
         success: true,
-        data: { user: { id: 1 }, token: 'token' },
+        data: {
+          user: { id: 1 },
+          accessToken: 'token',
+          refreshToken: 'refresh-token',
+        },
         message: 'Success',
       });
 
@@ -195,6 +213,7 @@ describe('authStore', () => {
     it('should set authenticated when token and user exist', () => {
       const mockUser = { id: 1, email: 'test@test.com', nombre: 'Test' };
       mockedAuthService.getStoredToken.mockReturnValueOnce('valid-token');
+      mockedAuthService.getStoredRefreshToken.mockReturnValueOnce('valid-refresh-token');
       mockedAuthService.getStoredUser.mockReturnValueOnce(mockUser as any);
 
       const { checkAuth } = useAuthStore.getState();
@@ -202,12 +221,14 @@ describe('authStore', () => {
 
       const state = useAuthStore.getState();
       expect(state.token).toBe('valid-token');
+      expect(state.refreshToken).toBe('valid-refresh-token');
       expect(state.user).toEqual(mockUser);
       expect(state.isAuthenticated).toBe(true);
     });
 
     it('should set not authenticated when token is missing', () => {
       mockedAuthService.getStoredToken.mockReturnValueOnce(null);
+      mockedAuthService.getStoredRefreshToken.mockReturnValueOnce(null);
       mockedAuthService.getStoredUser.mockReturnValueOnce({ id: 1 } as any);
 
       const { checkAuth } = useAuthStore.getState();
@@ -219,6 +240,7 @@ describe('authStore', () => {
 
     it('should set not authenticated when user is missing', () => {
       mockedAuthService.getStoredToken.mockReturnValueOnce('valid-token');
+      mockedAuthService.getStoredRefreshToken.mockReturnValueOnce('valid-refresh-token');
       mockedAuthService.getStoredUser.mockReturnValueOnce(null);
 
       const { checkAuth } = useAuthStore.getState();

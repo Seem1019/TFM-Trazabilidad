@@ -88,7 +88,7 @@ public class EnvioController {
 
     @GetMapping
     @Operation(summary = "Listar envíos", description = "Lista todos los envíos de la empresa")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_LOGISTICA', 'AUDITOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<EnvioResponse>>> listar(
             @AuthenticationPrincipal User user) {
         List<EnvioResponse> envios = envioService.listarPorEmpresa(user.getEmpresa().getId());
@@ -97,7 +97,7 @@ public class EnvioController {
 
     @GetMapping("/estado/{estado}")
     @Operation(summary = "Listar envíos por estado", description = "Lista envíos filtrados por estado")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_LOGISTICA', 'AUDITOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<EnvioResponse>>> listarPorEstado(
             @PathVariable String estado,
             @AuthenticationPrincipal User user) {
@@ -107,7 +107,7 @@ public class EnvioController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener envío por ID", description = "Obtiene los detalles de un envío específico")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_LOGISTICA', 'AUDITOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<EnvioResponse>> obtenerPorId(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {

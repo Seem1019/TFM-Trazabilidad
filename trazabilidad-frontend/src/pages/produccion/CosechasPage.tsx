@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Sprout, MoreHorizontal, Calendar } from 'lucide-react';
 import { cosechaService, loteService } from '@/services';
 import { useFetch } from '@/hooks/useFetch';
+import { usePermissions } from '@/hooks/usePermissions';
 import type { Cosecha, CosechaRequest, Lote } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { DataTable, type Column, PageLoader } from '@/components/shared';
+import { DataTable, type Column, PageLoader, PermissionGate } from '@/components/shared';
 import { CosechaFormDialog } from './components/CosechaFormDialog';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -37,6 +38,8 @@ export function CosechasPage() {
     useCallback(() => loteService.getAll(), []),
     []
   );
+
+  const { canUpdate, canDelete } = usePermissions();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedCosecha, setSelectedCosecha] = useState<Cosecha | null>(null);
@@ -149,11 +152,12 @@ export function CosechasPage() {
         )
       ),
     },
-    {
-      key: 'actions',
+    // Solo mostrar columna de acciones si el usuario tiene permisos
+    ...(canUpdate('cosechas') || canDelete('cosechas') ? [{
+      key: 'actions' as keyof Cosecha,
       header: '',
       className: 'w-[50px]',
-      render: (cosecha) => (
+      render: (cosecha: Cosecha) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -161,21 +165,25 @@ export function CosechasPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleEdit(cosecha)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => setDeleteId(cosecha.id)}
-              className="text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Eliminar
-            </DropdownMenuItem>
+            {canUpdate('cosechas') && (
+              <DropdownMenuItem onClick={() => handleEdit(cosecha)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar
+              </DropdownMenuItem>
+            )}
+            {canDelete('cosechas') && (
+              <DropdownMenuItem
+                onClick={() => setDeleteId(cosecha.id)}
+                className="text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
-    },
+    }] : []),
   ];
 
   if (isLoading) {
@@ -200,10 +208,12 @@ export function CosechasPage() {
             Registre las cosechas de sus lotes de producción
           </p>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Registrar Cosecha
-        </Button>
+        <PermissionGate module="cosechas" permission="create">
+          <Button onClick={handleCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Registrar Cosecha
+          </Button>
+        </PermissionGate>
       </div>
 
       <DataTable

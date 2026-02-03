@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/store/uiStore';
-import { useAuthStore } from '@/store/authStore';
+import { usePermissions, type Module } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -35,7 +35,7 @@ interface NavItem {
   title: string;
   href: string;
   icon: React.ElementType;
-  roles?: string[];
+  module: Module;
 }
 
 interface NavGroup {
@@ -47,47 +47,47 @@ const navGroups: NavGroup[] = [
   {
     title: 'Principal',
     items: [
-      { title: 'Dashboard', href: '/', icon: LayoutDashboard },
+      { title: 'Dashboard', href: '/', icon: LayoutDashboard, module: 'dashboard' },
     ],
   },
   {
     title: 'Producción',
     items: [
-      { title: 'Fincas', href: '/fincas', icon: MapPin },
-      { title: 'Lotes', href: '/lotes', icon: Layers },
-      { title: 'Cosechas', href: '/cosechas', icon: Sprout },
-      { title: 'Certificaciones', href: '/certificaciones', icon: Award },
-      { title: 'Actividades', href: '/actividades', icon: Leaf },
+      { title: 'Fincas', href: '/fincas', icon: MapPin, module: 'fincas' },
+      { title: 'Lotes', href: '/lotes', icon: Layers, module: 'lotes' },
+      { title: 'Cosechas', href: '/cosechas', icon: Sprout, module: 'cosechas' },
+      { title: 'Certificaciones', href: '/certificaciones', icon: Award, module: 'certificaciones' },
+      { title: 'Actividades', href: '/actividades', icon: Leaf, module: 'actividades' },
     ],
   },
   {
     title: 'Empaque',
     items: [
-      { title: 'Recepciones', href: '/recepciones', icon: Warehouse },
-      { title: 'Clasificación', href: '/clasificacion', icon: Package },
-      { title: 'Etiquetas', href: '/etiquetas', icon: Tags },
-      { title: 'Pallets', href: '/pallets', icon: Boxes },
-      { title: 'Control Calidad', href: '/control-calidad', icon: ClipboardCheck },
+      { title: 'Recepciones', href: '/recepciones', icon: Warehouse, module: 'recepciones' },
+      { title: 'Clasificación', href: '/clasificacion', icon: Package, module: 'clasificacion' },
+      { title: 'Etiquetas', href: '/etiquetas', icon: Tags, module: 'etiquetas' },
+      { title: 'Pallets', href: '/pallets', icon: Boxes, module: 'pallets' },
+      { title: 'Control Calidad', href: '/control-calidad', icon: ClipboardCheck, module: 'control-calidad' },
     ],
   },
   {
     title: 'Logística',
     items: [
-      { title: 'Envíos', href: '/envios', icon: Truck },
-      { title: 'Eventos', href: '/eventos', icon: CalendarClock },
-      { title: 'Documentos', href: '/documentos', icon: FileText },
+      { title: 'Envíos', href: '/envios', icon: Truck, module: 'envios' },
+      { title: 'Eventos', href: '/eventos', icon: CalendarClock, module: 'eventos' },
+      { title: 'Documentos', href: '/documentos', icon: FileText, module: 'documentos' },
     ],
   },
   {
     title: 'Trazabilidad',
     items: [
-      { title: 'Consulta', href: '/trazabilidad', icon: Search },
+      { title: 'Consulta', href: '/trazabilidad', icon: Search, module: 'trazabilidad' },
     ],
   },
   {
     title: 'Administración',
     items: [
-      { title: 'Usuarios', href: '/usuarios', icon: Users, roles: ['ADMIN'] },
+      { title: 'Usuarios', href: '/usuarios', icon: Users, module: 'usuarios' },
     ],
   },
 ];
@@ -95,7 +95,7 @@ const navGroups: NavGroup[] = [
 export function Sidebar() {
   const location = useLocation();
   const { sidebarCollapsed, toggleSidebarCollapsed } = useUIStore();
-  const { user } = useAuthStore();
+  const { canAccess } = usePermissions();
 
   const isActiveRoute = (href: string) => {
     if (href === '/') {
@@ -105,9 +105,7 @@ export function Sidebar() {
   };
 
   const canAccessItem = (item: NavItem) => {
-    if (!item.roles) return true;
-    if (!user) return false;
-    return item.roles.includes(user.rol);
+    return canAccess(item.module);
   };
 
   return (

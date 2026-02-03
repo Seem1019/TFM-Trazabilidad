@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Award, MoreHorizontal, AlertTriangle, MapPin } from 'lucide-react';
 import { certificacionService, fincaService } from '@/services';
 import { useFetch } from '@/hooks/useFetch';
+import { usePermissions } from '@/hooks/usePermissions';
 import type { Certificacion, CertificacionRequest, Finca } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { DataTable, type Column, PageLoader } from '@/components/shared';
+import { DataTable, type Column, PageLoader, PermissionGate } from '@/components/shared';
 import { CertificacionFormDialog } from './components/CertificacionFormDialog';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -43,6 +44,8 @@ export function CertificacionesPage() {
     useCallback(() => fincaService.getAll(), []),
     []
   );
+
+  const { canUpdate, canDelete } = usePermissions();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedCertificacion, setSelectedCertificacion] = useState<Certificacion | null>(null);
@@ -213,11 +216,12 @@ export function CertificacionesPage() {
         )
       ),
     },
-    {
-      key: 'actions',
+    // Solo mostrar columna de acciones si el usuario tiene permisos
+    ...(canUpdate('certificaciones') || canDelete('certificaciones') ? [{
+      key: 'actions' as keyof Certificacion,
       header: '',
       className: 'w-[50px]',
-      render: (cert) => (
+      render: (cert: Certificacion) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -225,21 +229,25 @@ export function CertificacionesPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleEdit(cert)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => setDeleteId(cert.id)}
-              className="text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Eliminar
-            </DropdownMenuItem>
+            {canUpdate('certificaciones') && (
+              <DropdownMenuItem onClick={() => handleEdit(cert)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar
+              </DropdownMenuItem>
+            )}
+            {canDelete('certificaciones') && (
+              <DropdownMenuItem
+                onClick={() => setDeleteId(cert.id)}
+                className="text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
-    },
+    }] : []),
   ];
 
   if (isLoadingFincas) {
@@ -268,10 +276,12 @@ export function CertificacionesPage() {
             Gestione las certificaciones de calidad de sus fincas
           </p>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nueva Certificación
-        </Button>
+        <PermissionGate module="certificaciones" permission="create">
+          <Button onClick={handleCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nueva Certificación
+          </Button>
+        </PermissionGate>
       </div>
 
       {/* Selector de Finca */}

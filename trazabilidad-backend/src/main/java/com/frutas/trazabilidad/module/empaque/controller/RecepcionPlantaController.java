@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,6 +27,7 @@ public class RecepcionPlantaController {
     private final RecepcionPlantaService recepcionService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<RecepcionPlantaResponse>>> listar(
             @AuthenticationPrincipal User user) {
         List<RecepcionPlantaResponse> recepciones = recepcionService.listarPorEmpresa(user.getEmpresa().getId());
@@ -33,6 +35,7 @@ public class RecepcionPlantaController {
     }
 
     @GetMapping("/lote/{loteId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<RecepcionPlantaResponse>>> listarPorLote(
             @PathVariable Long loteId,
             @AuthenticationPrincipal User user) {
@@ -41,6 +44,7 @@ public class RecepcionPlantaController {
     }
 
     @GetMapping("/estado/{estado}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<RecepcionPlantaResponse>>> listarPorEstado(
             @PathVariable String estado,
             @AuthenticationPrincipal User user) {
@@ -49,6 +53,7 @@ public class RecepcionPlantaController {
     }
 
     @GetMapping("/rango-fechas")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<RecepcionPlantaResponse>>> listarPorRangoFechas(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
@@ -59,6 +64,7 @@ public class RecepcionPlantaController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<RecepcionPlantaResponse>> obtenerPorId(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {
@@ -67,6 +73,7 @@ public class RecepcionPlantaController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_PLANTA')")
     public ResponseEntity<ApiResponse<RecepcionPlantaResponse>> crear(
             @Valid @RequestBody RecepcionPlantaRequest request,
             @AuthenticationPrincipal User user) {
@@ -75,6 +82,7 @@ public class RecepcionPlantaController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_PLANTA')")
     public ResponseEntity<ApiResponse<RecepcionPlantaResponse>> actualizar(
             @PathVariable Long id,
             @Valid @RequestBody RecepcionPlantaRequest request,
@@ -84,6 +92,7 @@ public class RecepcionPlantaController {
     }
 
     @PatchMapping("/{id}/estado")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_PLANTA')")
     public ResponseEntity<ApiResponse<RecepcionPlantaResponse>> cambiarEstado(
             @PathVariable Long id,
             @RequestParam String estado,
@@ -93,6 +102,7 @@ public class RecepcionPlantaController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> eliminar(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {

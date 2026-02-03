@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,6 +30,7 @@ public class ActividadAgronomicarController {
 
     @GetMapping("/lote/{loteId}")
     @Operation(summary = "Listar actividades por lote", description = "Obtiene todas las actividades de un lote")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<ActividadAgronomicarResponse>>> listarPorLote(
             @PathVariable Long loteId,
             @RequestHeader("Authorization") String token) {
@@ -40,6 +42,7 @@ public class ActividadAgronomicarController {
 
     @GetMapping("/lote/{loteId}/tipo/{tipo}")
     @Operation(summary = "Listar actividades por tipo", description = "Obtiene actividades de un tipo específico")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<ActividadAgronomicarResponse>>> listarPorTipo(
             @PathVariable Long loteId,
             @PathVariable String tipo,
@@ -52,6 +55,7 @@ public class ActividadAgronomicarController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener actividad por ID", description = "Obtiene los detalles de una actividad específica")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<ActividadAgronomicarResponse>> obtenerPorId(
             @PathVariable Long id,
             @RequestHeader("Authorization") String token) {
@@ -63,6 +67,7 @@ public class ActividadAgronomicarController {
 
     @PostMapping
     @Operation(summary = "Registrar actividad", description = "Registra una nueva actividad agronómica")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR')")
     public ResponseEntity<ApiResponse<ActividadAgronomicarResponse>> registrar(
             @Valid @RequestBody ActividadAgronomicarRequest request,
             @RequestHeader("Authorization") String token) {
@@ -75,6 +80,7 @@ public class ActividadAgronomicarController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar actividad", description = "Actualiza los datos de una actividad existente")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR')")
     public ResponseEntity<ApiResponse<ActividadAgronomicarResponse>> actualizar(
             @PathVariable Long id,
             @Valid @RequestBody ActividadAgronomicarRequest request,
@@ -87,6 +93,7 @@ public class ActividadAgronomicarController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Eliminar actividad", description = "Elimina (desactiva) una actividad")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> eliminar(
             @PathVariable Long id,
             @RequestHeader("Authorization") String token) {
@@ -98,6 +105,7 @@ public class ActividadAgronomicarController {
 
     @GetMapping("/lote/{loteId}/recientes")
     @Operation(summary = "Actividades recientes", description = "Obtiene las actividades de los últimos 30 días")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<ActividadAgronomicarResponse>>> recientes(
             @PathVariable Long loteId,
             @RequestHeader("Authorization") String token) {

@@ -123,7 +123,7 @@ public class Envio {
     /**
      * Bill of Lading (B/L) o Airway Bill (AWB).
      */
-    @Column(length = 100)
+    @Column(name = "numero_bl", length = 100)
     private String numeroBL;
 
     /**

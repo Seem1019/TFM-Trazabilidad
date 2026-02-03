@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,8 +26,21 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { login, isLoading, error, clearError } = useAuthStore();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const { login, isLoading, error, clearError, sessionExpired, clearSessionExpired } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
+
+  // Detectar si viene de una sesión expirada (desde state, store, o URL params)
+  const fromSessionExpired = location.state?.sessionExpired || sessionExpired || searchParams.get('sessionExpired') === 'true';
+  const from = location.state?.from?.pathname || '/';
+
+  // Limpiar estado de sesión expirada al montar
+  useEffect(() => {
+    return () => {
+      clearSessionExpired();
+    };
+  }, [clearSessionExpired]);
 
   const {
     register,
@@ -43,9 +56,11 @@ export function LoginPage() {
 
   const onSubmit = async (data: LoginFormData) => {
     clearError();
+    clearSessionExpired();
     const success = await login(data);
     if (success) {
-      navigate('/');
+      // Redirigir a donde venía o al dashboard
+      navigate(from, { replace: true });
     }
   };
 
@@ -61,7 +76,14 @@ export function LoginPage() {
       </CardHeader>
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
-          {error && (
+          {fromSessionExpired && (
+            <div className="flex items-center gap-2 rounded-md bg-amber-500/10 border border-amber-500/20 p-3 text-sm text-amber-700 dark:text-amber-400">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <span>Tu sesión ha expirado. Por favor, inicia sesión nuevamente.</span>
+            </div>
+          )}
+
+          {error && !fromSessionExpired && (
             <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
               {error}
             </div>

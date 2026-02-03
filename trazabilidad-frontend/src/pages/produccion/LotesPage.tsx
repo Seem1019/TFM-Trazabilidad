@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Layers, MoreHorizontal, Sprout } from 'lucide-react';
 import { loteService, fincaService } from '@/services';
 import { useFetch } from '@/hooks/useFetch';
+import { usePermissions } from '@/hooks/usePermissions';
 import type { Lote, LoteRequest, Finca } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { DataTable, type Column, PageLoader } from '@/components/shared';
+import { DataTable, type Column, PageLoader, PermissionGate } from '@/components/shared';
 import { LoteFormDialog } from './components/LoteFormDialog';
 
 export function LotesPage() {
@@ -35,6 +36,8 @@ export function LotesPage() {
     useCallback(() => fincaService.getAll(), []),
     []
   );
+
+  const { canUpdate, canDelete } = usePermissions();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedLote, setSelectedLote] = useState<Lote | null>(null);
@@ -159,11 +162,12 @@ export function LotesPage() {
         <span>{lote.totalCosechado?.toLocaleString() || 0} kg</span>
       ),
     },
-    {
-      key: 'actions',
+    // Solo mostrar columna de acciones si el usuario tiene permisos
+    ...(canUpdate('lotes') || canDelete('lotes') ? [{
+      key: 'actions' as keyof Lote,
       header: '',
       className: 'w-[50px]',
-      render: (lote) => (
+      render: (lote: Lote) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -171,21 +175,25 @@ export function LotesPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleEdit(lote)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => setDeleteId(lote.id)}
-              className="text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Eliminar
-            </DropdownMenuItem>
+            {canUpdate('lotes') && (
+              <DropdownMenuItem onClick={() => handleEdit(lote)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar
+              </DropdownMenuItem>
+            )}
+            {canDelete('lotes') && (
+              <DropdownMenuItem
+                onClick={() => setDeleteId(lote.id)}
+                className="text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
-    },
+    }] : []),
   ];
 
   if (isLoading) {
@@ -210,10 +218,12 @@ export function LotesPage() {
             Gestione los lotes de cultivo de sus fincas
           </p>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nuevo Lote
-        </Button>
+        <PermissionGate module="lotes" permission="create">
+          <Button onClick={handleCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo Lote
+          </Button>
+        </PermissionGate>
       </div>
 
       <DataTable

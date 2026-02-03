@@ -8,6 +8,7 @@ import com.frutas.trazabilidad.dto.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,6 +16,7 @@ import java.util.List;
 
 /**
  * Controller REST para gestión de clasificaciones.
+ * RBAC: ADMIN=CRUD, PRODUCTOR=R, OPERADOR_PLANTA=CRU, LOGISTICA=R, AUDITOR=R
  */
 @RestController
 @RequestMapping("/api/clasificaciones")
@@ -24,6 +26,7 @@ public class ClasificacionController {
     private final ClasificacionService clasificacionService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<ClasificacionResponse>>> listar(
             @AuthenticationPrincipal User user) {
         List<ClasificacionResponse> clasificaciones = clasificacionService.listarPorEmpresa(user.getEmpresa().getId());
@@ -31,6 +34,7 @@ public class ClasificacionController {
     }
 
     @GetMapping("/recepcion/{recepcionId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<ClasificacionResponse>>> listarPorRecepcion(
             @PathVariable Long recepcionId,
             @AuthenticationPrincipal User user) {
@@ -39,6 +43,7 @@ public class ClasificacionController {
     }
 
     @GetMapping("/calidad/{calidad}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<ClasificacionResponse>>> listarPorCalidad(
             @PathVariable String calidad,
             @AuthenticationPrincipal User user) {
@@ -47,6 +52,7 @@ public class ClasificacionController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<ClasificacionResponse>> obtenerPorId(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {
@@ -55,6 +61,7 @@ public class ClasificacionController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_PLANTA')")
     public ResponseEntity<ApiResponse<ClasificacionResponse>> crear(
             @Valid @RequestBody ClasificacionRequest request,
             @AuthenticationPrincipal User user) {
@@ -63,6 +70,7 @@ public class ClasificacionController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_PLANTA')")
     public ResponseEntity<ApiResponse<ClasificacionResponse>> actualizar(
             @PathVariable Long id,
             @Valid @RequestBody ClasificacionRequest request,
@@ -72,6 +80,7 @@ public class ClasificacionController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> eliminar(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {

@@ -5,10 +5,11 @@ spring:
   application:
     name: trazabilidad-backend
 
-  # Deshabilitar auto-detección de Docker Compose
+  # Auto-detección de Docker Compose - arranca PostgreSQL automáticamente si no está corriendo
   docker:
     compose:
-      enabled: false
+      enabled: true
+      lifecycle-management: start_and_stop  # Inicia al arrancar, para al cerrar
 
   datasource:
     url: jdbc:postgresql://localhost:5432/trazabilidad_db
@@ -18,7 +19,8 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update  # Crea/actualiza tablas automáticamente en desarrollo
+      ddl-auto: none  # Flyway maneja las migraciones completamente
+    defer-datasource-initialization: true  # Asegura que Flyway corra primero
     show-sql: true      # Muestra SQL en consola (útil para debug)
     properties:
       hibernate:
@@ -26,6 +28,15 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         jdbc:
           time_zone: UTC
+
+  # Flyway - Migraciones de base de datos
+  flyway:
+    enabled: true
+    baseline-on-migrate: true  # Crea baseline si la BD ya existe
+    baseline-version: '0'      # Versión base (V1 y superiores se ejecutarán)
+    locations: classpath:db/migration
+    validate-on-migrate: true
+    clean-disabled: false      # Permitir clean en desarrollo (SOLO para dev!)
 
   # Configuración de seguridad JWT
   security:
@@ -76,3 +87,4 @@ logging:
     org.springframework.security: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.flywaydb: DEBUG

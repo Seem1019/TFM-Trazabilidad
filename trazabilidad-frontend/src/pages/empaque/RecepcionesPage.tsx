@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Warehouse, MoreHorizontal, Calendar, Truck } from 'lucide-react';
 import { recepcionService, loteService } from '@/services';
 import { useFetch } from '@/hooks/useFetch';
+import { usePermissions } from '@/hooks/usePermissions';
 import type { RecepcionPlanta, RecepcionPlantaRequest, Lote } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { DataTable, type Column, PageLoader } from '@/components/shared';
+import { DataTable, type Column, PageLoader, PermissionGate } from '@/components/shared';
 import { RecepcionFormDialog } from './components/RecepcionFormDialog';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -36,6 +37,8 @@ export function RecepcionesPage() {
   } = useFetch<RecepcionPlanta[]>(useCallback(() => recepcionService.getAll(), []), []);
 
   const { data: lotes } = useFetch<Lote[]>(useCallback(() => loteService.getAll(), []), []);
+
+  const { canUpdate, canDelete } = usePermissions();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedRecepcion, setSelectedRecepcion] = useState<RecepcionPlanta | null>(null);
@@ -176,11 +179,12 @@ export function RecepcionesPage() {
         <Badge variant="outline">{rec.totalClasificaciones}</Badge>
       ),
     },
-    {
-      key: 'actions',
+    // Solo mostrar columna de acciones si el usuario tiene permisos
+    ...(canUpdate('recepciones') || canDelete('recepciones') ? [{
+      key: 'actions' as keyof RecepcionPlanta,
       header: '',
       className: 'w-[50px]',
-      render: (rec) => (
+      render: (rec: RecepcionPlanta) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -188,18 +192,22 @@ export function RecepcionesPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleEdit(rec)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setDeleteId(rec.id)} className="text-destructive">
-              <Trash2 className="mr-2 h-4 w-4" />
-              Eliminar
-            </DropdownMenuItem>
+            {canUpdate('recepciones') && (
+              <DropdownMenuItem onClick={() => handleEdit(rec)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar
+              </DropdownMenuItem>
+            )}
+            {canDelete('recepciones') && (
+              <DropdownMenuItem onClick={() => setDeleteId(rec.id)} className="text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
-    },
+    }] : []),
   ];
 
   if (isLoading) {
@@ -224,10 +232,12 @@ export function RecepcionesPage() {
             Gestione las recepciones de fruta en la planta de empaque
           </p>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nueva Recepción
-        </Button>
+        <PermissionGate module="recepciones" permission="create">
+          <Button onClick={handleCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nueva Recepción
+          </Button>
+        </PermissionGate>
       </div>
 
       {recepciones && recepciones.length === 0 ? (

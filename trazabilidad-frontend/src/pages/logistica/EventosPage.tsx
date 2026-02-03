@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { eventoLogisticoService, envioService } from '@/services';
 import { useFetch } from '@/hooks/useFetch';
+import { usePermissions } from '@/hooks/usePermissions';
 import type { EventoLogistico, EventoLogisticoRequest, Envio } from '@/types';
 import { TIPO_EVENTO_LABELS } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -43,7 +44,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { DataTable, type Column, PageLoader } from '@/components/shared';
+import { DataTable, type Column, PageLoader, PermissionGate } from '@/components/shared';
 import { EventoFormDialog } from './components/EventoFormDialog';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -75,6 +76,8 @@ export function EventosPage() {
     ),
     [selectedEnvioId]
   );
+
+  const { canUpdate, canDelete } = usePermissions();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedEvento, setSelectedEvento] = useState<EventoLogistico | null>(null);
@@ -247,11 +250,12 @@ export function EventosPage() {
           <Badge variant="outline">No</Badge>
         ),
     },
-    {
-      key: 'actions',
+    // Solo mostrar columna de acciones si el usuario tiene permisos
+    ...(canUpdate('eventos') || canDelete('eventos') ? [{
+      key: 'actions' as keyof EventoLogistico,
       header: '',
       className: 'w-[50px]',
-      render: (evt) => (
+      render: (evt: EventoLogistico) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -259,19 +263,25 @@ export function EventosPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleEdit(evt)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setDeleteId(evt.id)} className="text-destructive">
-              <Trash2 className="mr-2 h-4 w-4" />
-              Eliminar
-            </DropdownMenuItem>
+            {canUpdate('eventos') && (
+              <DropdownMenuItem onClick={() => handleEdit(evt)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar
+              </DropdownMenuItem>
+            )}
+            {canDelete('eventos') && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setDeleteId(evt.id)} className="text-destructive">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Eliminar
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
-    },
+    }] : []),
   ];
 
   if (loadingEnvios) {
@@ -287,10 +297,12 @@ export function EventosPage() {
             Registre y consulte los eventos de seguimiento de envíos
           </p>
         </div>
-        <Button onClick={handleCreate} disabled={!selectedEnvioId}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nuevo Evento
-        </Button>
+        <PermissionGate module="eventos" permission="create">
+          <Button onClick={handleCreate} disabled={!selectedEnvioId}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo Evento
+          </Button>
+        </PermissionGate>
       </div>
 
       {/* Selector de Envío */}

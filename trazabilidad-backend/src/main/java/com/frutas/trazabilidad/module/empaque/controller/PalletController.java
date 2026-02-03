@@ -30,7 +30,7 @@ public class PalletController {
 
     @GetMapping
     @Operation(summary = "Listar pallets", description = "Lista todos los pallets de la empresa")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<PalletResponse>>> listar(
             @AuthenticationPrincipal User user) {
         List<PalletResponse> pallets = palletService.listarPorEmpresa(user.getEmpresa().getId());
@@ -39,7 +39,7 @@ public class PalletController {
 
     @GetMapping("/estado/{estado}")
     @Operation(summary = "Listar pallets por estado")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<PalletResponse>>> listarPorEstado(
             @PathVariable String estado,
             @AuthenticationPrincipal User user) {
@@ -49,7 +49,7 @@ public class PalletController {
 
     @GetMapping("/destino")
     @Operation(summary = "Listar pallets por destino")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<PalletResponse>>> listarPorDestino(
             @RequestParam String destino,
             @AuthenticationPrincipal User user) {
@@ -59,7 +59,7 @@ public class PalletController {
 
     @GetMapping("/tipo-fruta/{tipoFruta}")
     @Operation(summary = "Listar pallets por tipo de fruta")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<PalletResponse>>> listarPorTipoFruta(
             @PathVariable String tipoFruta,
             @AuthenticationPrincipal User user) {
@@ -78,7 +78,7 @@ public class PalletController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener pallet por ID")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<PalletResponse>> obtenerPorId(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {
@@ -120,7 +120,7 @@ public class PalletController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Eliminar pallet")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_PLANTA')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> eliminar(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {

@@ -6,7 +6,7 @@ spring:
     password:
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: create-drop  # Para tests, Hibernate crea el esquema
     show-sql: false
     properties:
       hibernate:
@@ -14,6 +14,9 @@ spring:
   h2:
     console:
       enabled: false
+  # Deshabilitamos Flyway para tests - Hibernate maneja el esquema
+  flyway:
+    enabled: false
 
 # JWT configuration for tests
 jwt:

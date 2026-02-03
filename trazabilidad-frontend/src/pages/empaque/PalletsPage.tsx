@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { palletService } from '@/services';
 import { useFetch } from '@/hooks/useFetch';
+import { usePermissions } from '@/hooks/usePermissions';
 import type { Pallet, PalletRequest } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,7 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { DataTable, type Column, PageLoader } from '@/components/shared';
+import { DataTable, type Column, PageLoader, PermissionGate } from '@/components/shared';
 import { PalletFormDialog } from './components/PalletFormDialog';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -45,6 +46,8 @@ export function PalletsPage() {
     error,
     refetch,
   } = useFetch<Pallet[]>(useCallback(() => palletService.getAll(), []), []);
+
+  const { canUpdate, canDelete } = usePermissions();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedPallet, setSelectedPallet] = useState<Pallet | null>(null);
@@ -217,11 +220,12 @@ export function PalletsPage() {
         </Badge>
       ),
     },
-    {
-      key: 'actions',
+    // Solo mostrar columna de acciones si el usuario tiene permisos
+    ...(canUpdate('pallets') || canDelete('pallets') ? [{
+      key: 'actions' as keyof Pallet,
       header: '',
       className: 'w-[50px]',
-      render: (pal) => (
+      render: (pal: Pallet) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -229,40 +233,48 @@ export function PalletsPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleEdit(pal)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            {pal.estadoPallet === 'PREPARADO' && (
-              <DropdownMenuItem onClick={() => handleCambiarEstado(pal.id, 'LISTO_ENVIO')}>
-                Marcar Listo para Envío
-              </DropdownMenuItem>
-            )}
-            {pal.estadoPallet === 'LISTO_ENVIO' && (
-              <DropdownMenuItem onClick={() => handleCambiarEstado(pal.id, 'ENVIADO')}>
-                Marcar como Enviado
-              </DropdownMenuItem>
-            )}
-            {pal.estadoPallet === 'ENVIADO' && (
+            {canUpdate('pallets') && (
               <>
-                <DropdownMenuItem onClick={() => handleCambiarEstado(pal.id, 'ENTREGADO')}>
-                  Marcar como Entregado
+                <DropdownMenuItem onClick={() => handleEdit(pal)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Editar
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleCambiarEstado(pal.id, 'RECHAZADO')}>
-                  Marcar como Rechazado
+                <DropdownMenuSeparator />
+                {pal.estadoPallet === 'PREPARADO' && (
+                  <DropdownMenuItem onClick={() => handleCambiarEstado(pal.id, 'LISTO_ENVIO')}>
+                    Marcar Listo para Envío
+                  </DropdownMenuItem>
+                )}
+                {pal.estadoPallet === 'LISTO_ENVIO' && (
+                  <DropdownMenuItem onClick={() => handleCambiarEstado(pal.id, 'ENVIADO')}>
+                    Marcar como Enviado
+                  </DropdownMenuItem>
+                )}
+                {pal.estadoPallet === 'ENVIADO' && (
+                  <>
+                    <DropdownMenuItem onClick={() => handleCambiarEstado(pal.id, 'ENTREGADO')}>
+                      Marcar como Entregado
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleCambiarEstado(pal.id, 'RECHAZADO')}>
+                      Marcar como Rechazado
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </>
+            )}
+            {canDelete('pallets') && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setDeleteId(pal.id)} className="text-destructive">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Eliminar
                 </DropdownMenuItem>
               </>
             )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setDeleteId(pal.id)} className="text-destructive">
-              <Trash2 className="mr-2 h-4 w-4" />
-              Eliminar
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
-    },
+    }] : []),
   ];
 
   if (isLoading) {
@@ -289,10 +301,12 @@ export function PalletsPage() {
           <h2 className="text-3xl font-bold tracking-tight">Pallets</h2>
           <p className="text-muted-foreground">Gestione los pallets de fruta para exportación</p>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nuevo Pallet
-        </Button>
+        <PermissionGate module="pallets" permission="create">
+          <Button onClick={handleCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo Pallet
+          </Button>
+        </PermissionGate>
       </div>
 
       {/* Estadísticas rápidas */}

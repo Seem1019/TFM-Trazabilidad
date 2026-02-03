@@ -8,8 +8,11 @@ import com.frutas.trazabilidad.module.logistica.entity.Envio;
 import com.frutas.trazabilidad.module.logistica.mapper.AuditoriaEventoMapper;
 import com.frutas.trazabilidad.module.logistica.repository.AuditoriaEventoRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
@@ -23,6 +26,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuditoriaEventoService {
 
     private final AuditoriaEventoRepository auditoriaRepository;
@@ -88,6 +92,100 @@ public class AuditoriaEventoService {
                 "WARNING",
                 false
         );
+    }
+
+    // ========== MÉTODOS ASÍNCRONOS PARA JPA LISTENERS ==========
+
+    /**
+     * Versión asíncrona de registrarCreacion para uso en JPA EntityListeners.
+     * Se ejecuta en una transacción separada para evitar ConcurrentModificationException.
+     */
+    @Async
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void registrarCreacionAsync(String tipoEntidad, Long entidadId, String codigoEntidad,
+                                       String descripcion, Long usuarioId) {
+        try {
+            User usuario = userRepository.findById(usuarioId).orElse(null);
+            if (usuario == null) {
+                log.warn("Usuario no encontrado para auditoría async: {}", usuarioId);
+                return;
+            }
+            registrarEvento(
+                    usuario,
+                    tipoEntidad,
+                    entidadId,
+                    codigoEntidad,
+                    "CREATE",
+                    descripcion,
+                    null,
+                    null,
+                    "INFO",
+                    false
+            );
+        } catch (Exception e) {
+            log.error("Error en auditoría asíncrona CREATE: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Versión asíncrona de registrarActualizacion para uso en JPA EntityListeners.
+     */
+    @Async
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void registrarActualizacionAsync(String tipoEntidad, Long entidadId, String codigoEntidad,
+                                            String descripcion, String datosAnteriores, String datosNuevos,
+                                            Long usuarioId) {
+        try {
+            User usuario = userRepository.findById(usuarioId).orElse(null);
+            if (usuario == null) {
+                log.warn("Usuario no encontrado para auditoría async: {}", usuarioId);
+                return;
+            }
+            registrarEvento(
+                    usuario,
+                    tipoEntidad,
+                    entidadId,
+                    codigoEntidad,
+                    "UPDATE",
+                    descripcion,
+                    datosAnteriores,
+                    datosNuevos,
+                    "INFO",
+                    false
+            );
+        } catch (Exception e) {
+            log.error("Error en auditoría asíncrona UPDATE: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Versión asíncrona de registrarEliminacion para uso en JPA EntityListeners.
+     */
+    @Async
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void registrarEliminacionAsync(String tipoEntidad, Long entidadId, String codigoEntidad,
+                                          String descripcion, Long usuarioId) {
+        try {
+            User usuario = userRepository.findById(usuarioId).orElse(null);
+            if (usuario == null) {
+                log.warn("Usuario no encontrado para auditoría async: {}", usuarioId);
+                return;
+            }
+            registrarEvento(
+                    usuario,
+                    tipoEntidad,
+                    entidadId,
+                    codigoEntidad,
+                    "DELETE",
+                    descripcion,
+                    null,
+                    null,
+                    "WARNING",
+                    false
+            );
+        } catch (Exception e) {
+            log.error("Error en auditoría asíncrona DELETE: {}", e.getMessage());
+        }
     }
 
     /**

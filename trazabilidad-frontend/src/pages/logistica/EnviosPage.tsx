@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { envioService } from '@/services';
 import { useFetch } from '@/hooks/useFetch';
+import { usePermissions } from '@/hooks/usePermissions';
 import type { Envio, EnvioRequest } from '@/types';
 import { ESTADO_ENVIO_LABELS } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -38,7 +39,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { DataTable, type Column, PageLoader } from '@/components/shared';
+import { DataTable, type Column, PageLoader, PermissionGate } from '@/components/shared';
 import { EnvioFormDialog } from './components/EnvioFormDialog';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -51,6 +52,8 @@ export function EnviosPage() {
     error,
     refetch,
   } = useFetch<Envio[]>(useCallback(() => envioService.getAll(), []), []);
+
+  const { canUpdate, canDelete } = usePermissions();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedEnvio, setSelectedEnvio] = useState<Envio | null>(null);
@@ -279,7 +282,7 @@ export function EnviosPage() {
                 Ver Detalle
               </Link>
             </DropdownMenuItem>
-            {!env.hashCierre && (
+            {!env.hashCierre && canUpdate('envios') && (
               <>
                 <DropdownMenuItem onClick={() => handleEdit(env)}>
                   <Pencil className="mr-2 h-4 w-4" />
@@ -326,7 +329,7 @@ export function EnviosPage() {
                 <DropdownMenuSeparator />
               </>
             )}
-            {!env.hashCierre && (
+            {!env.hashCierre && canDelete('envios') && (
               <DropdownMenuItem onClick={() => setDeleteId(env.id)} className="text-destructive">
                 <Trash2 className="mr-2 h-4 w-4" />
                 Eliminar
@@ -363,10 +366,12 @@ export function EnviosPage() {
           <h2 className="text-3xl font-bold tracking-tight">Envíos</h2>
           <p className="text-muted-foreground">Gestione los envíos de exportación</p>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nuevo Envío
-        </Button>
+        <PermissionGate module="envios" permission="create">
+          <Button onClick={handleCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo Envío
+          </Button>
+        </PermissionGate>
       </div>
 
       {/* Estadísticas rápidas */}

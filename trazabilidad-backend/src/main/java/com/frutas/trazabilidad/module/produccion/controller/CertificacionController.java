@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,6 +30,7 @@ public class CertificacionController {
 
     @GetMapping("/finca/{fincaId}")
     @Operation(summary = "Listar certificaciones por finca", description = "Obtiene todas las certificaciones de una finca")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<CertificacionResponse>>> listarPorFinca(
             @PathVariable Long fincaId,
             @RequestHeader("Authorization") String token) {
@@ -40,6 +42,7 @@ public class CertificacionController {
 
     @GetMapping("/finca/{fincaId}/vigentes")
     @Operation(summary = "Listar certificaciones vigentes", description = "Obtiene las certificaciones vigentes de una finca")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<CertificacionResponse>>> listarVigentes(
             @PathVariable Long fincaId,
             @RequestHeader("Authorization") String token) {
@@ -51,6 +54,7 @@ public class CertificacionController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener certificación por ID", description = "Obtiene los detalles de una certificación específica")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<CertificacionResponse>> obtenerPorId(
             @PathVariable Long id,
             @RequestHeader("Authorization") String token) {
@@ -62,6 +66,7 @@ public class CertificacionController {
 
     @PostMapping
     @Operation(summary = "Crear certificación", description = "Crea una nueva certificación para una finca")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR')")
     public ResponseEntity<ApiResponse<CertificacionResponse>> crear(
             @Valid @RequestBody CertificacionRequest request,
             @RequestHeader("Authorization") String token) {
@@ -74,6 +79,7 @@ public class CertificacionController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar certificación", description = "Actualiza los datos de una certificación existente")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR')")
     public ResponseEntity<ApiResponse<CertificacionResponse>> actualizar(
             @PathVariable Long id,
             @Valid @RequestBody CertificacionRequest request,
@@ -86,6 +92,7 @@ public class CertificacionController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Eliminar certificación", description = "Elimina (desactiva) una certificación")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> eliminar(
             @PathVariable Long id,
             @RequestHeader("Authorization") String token) {
@@ -97,6 +104,7 @@ public class CertificacionController {
 
     @GetMapping("/proximas-vencer")
     @Operation(summary = "Certificaciones próximas a vencer", description = "Obtiene certificaciones que vencen en los próximos 30 días")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
     public ResponseEntity<ApiResponse<List<CertificacionResponse>>> proximasAVencer(
             @RequestHeader("Authorization") String token) {
 
