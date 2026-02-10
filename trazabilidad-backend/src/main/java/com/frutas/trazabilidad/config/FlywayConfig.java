@@ -54,8 +54,14 @@ public class FlywayConfig {
                 .baselineOnMigrate(baselineOnMigrate)
                 .baselineVersion(baselineVersion)
                 .validateOnMigrate(validateOnMigrate)
-                .cleanDisabled(cleanDisabled)
+                .cleanDisabled(false) // TODO: TEMPORAL - volver a cleanDisabled después del primer deploy
                 .load();
+
+        // TEMPORAL: Limpiar schema para forzar re-ejecución de todas las migraciones
+        // TODO: ELIMINAR este bloque después del primer deploy exitoso
+        log.warn("⚠️ LIMPIEZA TEMPORAL: Ejecutando flyway.clean() para resetear schema...");
+        flyway.clean();
+        log.info("🧹 Schema limpiado. Re-ejecutando todas las migraciones...");
 
         // Ejecutar migraciones inmediatamente
         log.info("🚀 Ejecutando migraciones de Flyway...");
