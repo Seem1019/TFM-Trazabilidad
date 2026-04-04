@@ -20,8 +20,13 @@ spring:
         jdbc:
           time_zone: UTC
 
-  # Flyway - configuración manual en FlywayConfig.java
-  # (No usamos la autoconfiguración de Spring Boot)
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: '0'
+    locations: classpath:db/migration
+    validate-on-migrate: true
+    clean-disabled: true  # NUNCA permitir clean en producción
 
   security:
     jwt:
