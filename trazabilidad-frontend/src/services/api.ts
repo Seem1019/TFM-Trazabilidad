@@ -3,6 +3,15 @@ import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 /**
+ * Detalle de error de validación por campo
+ */
+interface ErrorDetail {
+  field: string;
+  message: string;
+  rejectedValue?: unknown;
+}
+
+/**
  * Interfaz para la respuesta de error de la API (patrón REPR)
  */
 interface ApiErrorResponse {
@@ -11,6 +20,7 @@ interface ApiErrorResponse {
   path: string;
   requestId: string;
   message: string;
+  errors?: ErrorDetail[];
 }
 
 /**
@@ -20,10 +30,18 @@ interface ApiErrorResponse {
 export function extractErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<ApiErrorResponse>;
+    const data = axiosError.response?.data;
+
+    // Si hay errores de validación por campo, construir mensaje detallado
+    if (data?.errors && data.errors.length > 0) {
+      return data.errors
+        .map((e) => `${e.field}: ${e.message}`)
+        .join('. ');
+    }
 
     // Intentar obtener el mensaje de la respuesta de la API
-    if (axiosError.response?.data?.message) {
-      return axiosError.response.data.message;
+    if (data?.message) {
+      return data.message;
     }
 
     // Si hay respuesta pero no mensaje específico, usar status text
@@ -47,6 +65,26 @@ export function extractErrorMessage(error: unknown): string {
   }
 
   return 'Ha ocurrido un error inesperado';
+}
+
+/**
+ * Extrae los errores de validación por campo (útil para marcar campos específicos)
+ */
+export function extractFieldErrors(error: unknown): Record<string, string> {
+  const fieldErrors: Record<string, string> = {};
+
+  if (axios.isAxiosError(error)) {
+    const axiosError = error as AxiosError<ApiErrorResponse>;
+    const errors = axiosError.response?.data?.errors;
+
+    if (errors && errors.length > 0) {
+      errors.forEach((e) => {
+        fieldErrors[e.field] = e.message;
+      });
+    }
+  }
+
+  return fieldErrors;
 }
 
 // Claves de localStorage (deben coincidir con authService)
