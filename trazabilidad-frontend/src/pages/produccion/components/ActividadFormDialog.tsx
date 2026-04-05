@@ -33,14 +33,19 @@ const TIPOS_ACTIVIDAD: TipoActividad[] = [
   'OTRO',
 ];
 
+const UNIDADES_MEDIDA = ['kg', 'g', 'litros', 'ml', 'kg/ha', 'L/ha', 'cc/L', 'g/L'] as const;
+
 const actividadSchema = z.object({
   loteId: z.string().min(1, 'Seleccione un lote'),
   tipoActividad: z.string().min(1, 'Seleccione un tipo de actividad'),
   fechaActividad: z.string().min(1, 'La fecha es requerida'),
-  descripcion: z.string().max(500).optional(),
-  productosUtilizados: z.string().max(500).optional(),
-  dosificacion: z.string().max(200).optional(),
-  responsable: z.string().max(150).optional(),
+  productoAplicado: z.string().max(200, 'Máximo 200 caracteres').optional(),
+  dosisoCantidad: z.string().max(100, 'Máximo 100 caracteres').optional(),
+  unidadMedida: z.string().max(50).optional(),
+  metodoAplicacion: z.string().max(100, 'Máximo 100 caracteres').optional(),
+  responsable: z.string().max(150, 'Máximo 150 caracteres').optional(),
+  numeroRegistroProducto: z.string().max(100, 'Máximo 100 caracteres').optional(),
+  intervaloSeguridadDias: z.string().optional(),
   observaciones: z.string().optional(),
 });
 
@@ -74,16 +79,20 @@ export function ActividadFormDialog({
       loteId: '',
       tipoActividad: '',
       fechaActividad: new Date().toISOString().split('T')[0],
-      descripcion: '',
-      productosUtilizados: '',
-      dosificacion: '',
+      productoAplicado: '',
+      dosisoCantidad: '',
+      unidadMedida: '',
+      metodoAplicacion: '',
       responsable: '',
+      numeroRegistroProducto: '',
+      intervaloSeguridadDias: '',
       observaciones: '',
     },
   });
 
   const watchLoteId = watch('loteId');
   const watchTipo = watch('tipoActividad');
+  const watchUnidad = watch('unidadMedida');
 
   useEffect(() => {
     if (open) {
@@ -92,10 +101,13 @@ export function ActividadFormDialog({
           loteId: String(actividad.loteId),
           tipoActividad: actividad.tipoActividad,
           fechaActividad: actividad.fechaActividad?.split('T')[0] || '',
-          descripcion: actividad.descripcion || '',
-          productosUtilizados: actividad.productosUtilizados || '',
-          dosificacion: actividad.dosificacion || '',
+          productoAplicado: actividad.productoAplicado || '',
+          dosisoCantidad: actividad.dosisoCantidad || '',
+          unidadMedida: actividad.unidadMedida || '',
+          metodoAplicacion: actividad.metodoAplicacion || '',
           responsable: actividad.responsable || '',
+          numeroRegistroProducto: actividad.numeroRegistroProducto || '',
+          intervaloSeguridadDias: actividad.intervaloSeguridadDias != null ? String(actividad.intervaloSeguridadDias) : '',
           observaciones: actividad.observaciones || '',
         });
       } else {
@@ -103,10 +115,13 @@ export function ActividadFormDialog({
           loteId: '',
           tipoActividad: '',
           fechaActividad: new Date().toISOString().split('T')[0],
-          descripcion: '',
-          productosUtilizados: '',
-          dosificacion: '',
+          productoAplicado: '',
+          dosisoCantidad: '',
+          unidadMedida: '',
+          metodoAplicacion: '',
           responsable: '',
+          numeroRegistroProducto: '',
+          intervaloSeguridadDias: '',
           observaciones: '',
         });
       }
@@ -118,10 +133,13 @@ export function ActividadFormDialog({
       loteId: Number(data.loteId),
       tipoActividad: data.tipoActividad as TipoActividad,
       fechaActividad: data.fechaActividad,
-      descripcion: data.descripcion || undefined,
-      productosUtilizados: data.productosUtilizados || undefined,
-      dosificacion: data.dosificacion || undefined,
+      productoAplicado: data.productoAplicado || undefined,
+      dosisoCantidad: data.dosisoCantidad || undefined,
+      unidadMedida: data.unidadMedida || undefined,
+      metodoAplicacion: data.metodoAplicacion || undefined,
       responsable: data.responsable || undefined,
+      numeroRegistroProducto: data.numeroRegistroProducto || undefined,
+      intervaloSeguridadDias: data.intervaloSeguridadDias ? Number(data.intervaloSeguridadDias) : undefined,
       observaciones: data.observaciones || undefined,
     };
     await onSubmit(cleanData);
@@ -213,33 +231,78 @@ export function ActividadFormDialog({
               />
             </div>
 
-            {/* Descripción */}
-            <div className="col-span-2 space-y-2">
-              <Label htmlFor="descripcion">Descripción</Label>
-              <Textarea
-                id="descripcion"
-                placeholder="Describa la actividad realizada..."
-                {...register('descripcion')}
-              />
-            </div>
-
-            {/* Productos Utilizados */}
+            {/* Producto Aplicado */}
             <div className="space-y-2">
-              <Label htmlFor="productosUtilizados">Productos Utilizados</Label>
+              <Label htmlFor="productoAplicado">Producto Aplicado</Label>
               <Input
-                id="productosUtilizados"
+                id="productoAplicado"
                 placeholder="Fertilizante NPK, Fungicida..."
-                {...register('productosUtilizados')}
+                {...register('productoAplicado')}
+              />
+              {errors.productoAplicado && (
+                <p className="text-sm text-destructive">{errors.productoAplicado.message}</p>
+              )}
+            </div>
+
+            {/* Número de Registro del Producto */}
+            <div className="space-y-2">
+              <Label htmlFor="numeroRegistroProducto">N° Registro Producto (ICA)</Label>
+              <Input
+                id="numeroRegistroProducto"
+                placeholder="Registro ICA del producto"
+                {...register('numeroRegistroProducto')}
               />
             </div>
 
-            {/* Dosificación */}
+            {/* Dosis o Cantidad */}
             <div className="space-y-2">
-              <Label htmlFor="dosificacion">Dosificación</Label>
+              <Label htmlFor="dosisoCantidad">Dosis / Cantidad</Label>
               <Input
-                id="dosificacion"
+                id="dosisoCantidad"
                 placeholder="100g por planta, 2L/Ha..."
-                {...register('dosificacion')}
+                {...register('dosisoCantidad')}
+              />
+            </div>
+
+            {/* Unidad de Medida */}
+            <div className="space-y-2">
+              <Label>Unidad de Medida</Label>
+              <Select
+                value={watchUnidad}
+                onValueChange={(value) => setValue('unidadMedida', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccione unidad" />
+                </SelectTrigger>
+                <SelectContent>
+                  {UNIDADES_MEDIDA.map((unidad) => (
+                    <SelectItem key={unidad} value={unidad}>
+                      {unidad}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Método de Aplicación */}
+            <div className="space-y-2">
+              <Label htmlFor="metodoAplicacion">Método de Aplicación</Label>
+              <Input
+                id="metodoAplicacion"
+                placeholder="Aspersión, drench, inyección..."
+                {...register('metodoAplicacion')}
+              />
+            </div>
+
+            {/* Intervalo de Seguridad */}
+            <div className="space-y-2">
+              <Label htmlFor="intervaloSeguridadDias">Intervalo de Seguridad (días)</Label>
+              <Input
+                id="intervaloSeguridadDias"
+                type="number"
+                min="0"
+                placeholder="7"
+                {...register('intervaloSeguridadDias')}
               />
             </div>
 

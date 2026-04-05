@@ -78,8 +78,8 @@ export function ControlCalidadPage() {
       await controlCalidadService.delete(deleteId);
       toast.success('Control eliminado correctamente');
       refetch();
-    } catch {
-      toast.error('Error al eliminar el control');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar el control');
     } finally {
       setDeleteId(null);
     }
@@ -96,8 +96,8 @@ export function ControlCalidadPage() {
       }
       setIsFormOpen(false);
       refetch();
-    } catch {
-      toast.error(selectedControl ? 'Error al actualizar' : 'Error al registrar');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (selectedControl ? 'Error al actualizar' : 'Error al registrar'));
     }
   };
 

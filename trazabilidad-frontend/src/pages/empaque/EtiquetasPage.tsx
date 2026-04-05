@@ -71,8 +71,8 @@ export function EtiquetasPage() {
       await etiquetaService.delete(deleteId);
       toast.success('Etiqueta eliminada correctamente');
       refetch();
-    } catch {
-      toast.error('Error al eliminar la etiqueta');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar la etiqueta');
     } finally {
       setDeleteId(null);
     }
@@ -89,8 +89,8 @@ export function EtiquetasPage() {
       }
       setIsFormOpen(false);
       refetch();
-    } catch {
-      toast.error(selectedEtiqueta ? 'Error al actualizar' : 'Error al crear');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (selectedEtiqueta ? 'Error al actualizar' : 'Error al crear'));
     }
   };
 

@@ -109,8 +109,8 @@ export function EventosPage() {
       await eventoLogisticoService.delete(deleteId);
       toast.success('Evento eliminado correctamente');
       refetch();
-    } catch {
-      toast.error('Error al eliminar el evento');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar el evento');
     } finally {
       setDeleteId(null);
     }
@@ -127,8 +127,8 @@ export function EventosPage() {
       }
       setIsFormOpen(false);
       refetch();
-    } catch {
-      toast.error(selectedEvento ? 'Error al actualizar' : 'Error al crear');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (selectedEvento ? 'Error al actualizar' : 'Error al crear'));
     }
   };
 

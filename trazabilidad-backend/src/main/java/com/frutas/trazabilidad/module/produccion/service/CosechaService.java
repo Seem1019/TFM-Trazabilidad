@@ -92,19 +92,21 @@ public class CosechaService {
         Lote lote = loteRepository.findByIdAndEmpresaId(request.getLoteId(), empresaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Lote", request.getLoteId()));
 
+        // Verificar si es primera cosecha ANTES de guardar
+        boolean esPrimeraCosecha = cosechaRepository.countByLoteIdAndActivoTrue(lote.getId()) == 0;
+
         // Mapear y guardar
         Cosecha cosecha = cosechaMapper.toEntity(request);
         cosecha.setLote(lote);
         cosecha.setActivo(true);
+        cosecha = cosechaRepository.save(cosecha);
 
-        // Actualizar estado del lote si es primera cosecha
-        if (cosechaRepository.countByLoteIdAndActivoTrue(lote.getId()) == 0) {
-            lote.setEstadoLote("EN_COSECHA");
-            loteRepository.save(lote);
+        // Actualizar estado del lote con JPQL directo para evitar
+        // ConcurrentModificationException (Lote tiene CascadeType.ALL en cosechas)
+        if (esPrimeraCosecha) {
+            loteRepository.updateEstadoLote(lote.getId(), "EN_COSECHA");
             log.info("Lote {} actualizado a estado EN_COSECHA", lote.getId());
         }
-
-        cosecha = cosechaRepository.save(cosecha);
 
         log.info("Cosecha registrada exitosamente: id={}, cantidad={} {}",
                 cosecha.getId(), cosecha.getCantidadCosechada(), cosecha.getUnidadMedida());

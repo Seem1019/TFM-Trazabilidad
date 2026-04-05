@@ -53,8 +53,8 @@ export function FincasPage() {
       await fincaService.delete(deleteId);
       toast.success('Finca eliminada correctamente');
       refetch();
-    } catch {
-      toast.error('Error al eliminar la finca');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar la finca');
     } finally {
       setDeleteId(null);
     }
@@ -71,8 +71,8 @@ export function FincasPage() {
       }
       setIsFormOpen(false);
       refetch();
-    } catch {
-      toast.error(selectedFinca ? 'Error al actualizar la finca' : 'Error al crear la finca');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (selectedFinca ? 'Error al actualizar la finca' : 'Error al crear la finca'));
     }
   };
 
