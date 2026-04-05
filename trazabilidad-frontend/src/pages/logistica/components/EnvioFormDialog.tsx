@@ -100,7 +100,7 @@ export function EnvioFormDialog({
     try {
       const pallets = await palletService.getListosEnvio();
       setPalletsDisponibles(pallets);
-    } catch {
+    } catch (error) {
       // Silent fail
     } finally {
       setLoadingPallets(false);

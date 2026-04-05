@@ -90,8 +90,8 @@ export function TrazabilidadInternaPage() {
     try {
       const result = await trazabilidadService.getCompleta(selectedEtiquetaId);
       setTrazabilidad(result);
-    } catch {
-      toast.error('Error al obtener la trazabilidad');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al obtener la trazabilidad');
       setTrazabilidad(null);
     } finally {
       setLoading(false);

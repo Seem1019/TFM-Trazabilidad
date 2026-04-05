@@ -18,7 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -231,6 +233,30 @@ public class AuditoriaEventoService {
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         return auditoriaRepository.findByEmpresaIdOrderByFechaDesc(usuario.getEmpresa().getId())
+                .stream()
+                .map(this::toResponseConValidacion)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Listar eventos de auditoría con filtros combinados opcionales.
+     */
+    @Transactional(readOnly = true)
+    public List<AuditoriaEventoResponse> listarConFiltros(
+            String modulo, String tipoOperacion, String nivelCriticidad,
+            Long usuarioId, LocalDate desde, LocalDate hasta) {
+
+        String email = Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getName();
+        User usuario = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        LocalDateTime desdeDateTime = desde != null ? desde.atStartOfDay() : null;
+        LocalDateTime hastaDateTime = hasta != null ? hasta.atTime(LocalTime.MAX) : null;
+
+        return auditoriaRepository.findByEmpresaIdConFiltros(
+                        usuario.getEmpresa().getId(),
+                        modulo, tipoOperacion, nivelCriticidad, usuarioId,
+                        desdeDateTime, hastaDateTime)
                 .stream()
                 .map(this::toResponseConValidacion)
                 .collect(Collectors.toList());

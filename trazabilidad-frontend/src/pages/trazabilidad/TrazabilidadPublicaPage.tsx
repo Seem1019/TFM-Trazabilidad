@@ -37,8 +37,8 @@ export function TrazabilidadPublicaPage() {
       try {
         const result = await trazabilidadService.getPublica(uuid);
         setData(result);
-      } catch (err) {
-        setError('No se encontró información para este código QR');
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'No se encontró información para este código QR');
       } finally {
         setLoading(false);
       }
@@ -51,7 +51,7 @@ export function TrazabilidadPublicaPage() {
     if (!dateStr) return '-';
     try {
       return format(new Date(dateStr), 'dd MMMM yyyy', { locale: es });
-    } catch {
+    } catch (error) {
       return dateStr;
     }
   };

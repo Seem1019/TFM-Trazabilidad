@@ -119,4 +119,28 @@ public interface AuditoriaEventoRepository extends JpaRepository<AuditoriaEvento
      */
     @Query("SELECT COUNT(a) FROM AuditoriaEvento a WHERE a.empresaId = :empresaId AND a.tipoEntidad = :tipoEntidad")
     long countByEmpresaIdAndTipoEntidad(@Param("empresaId") Long empresaId, @Param("tipoEntidad") String tipoEntidad);
+
+    /**
+     * Lista eventos de auditoría con filtros opcionales combinados.
+     * Usa native query con CAST para que PostgreSQL pueda inferir tipos de parámetros null.
+     */
+    @Query(value = "SELECT * FROM auditoria_eventos a WHERE a.empresa_id = :empresaId " +
+            "AND (:modulo IS NULL OR a.modulo = CAST(:modulo AS VARCHAR)) " +
+            "AND (:tipoOperacion IS NULL OR a.tipo_operacion = CAST(:tipoOperacion AS VARCHAR)) " +
+            "AND (:nivelCriticidad IS NULL OR a.nivel_criticidad = CAST(:nivelCriticidad AS VARCHAR)) " +
+            "AND (CAST(:usuarioId AS BIGINT) IS NULL OR a.usuario_id = CAST(:usuarioId AS BIGINT)) " +
+            "AND (CAST(:desde AS TIMESTAMP) IS NULL OR a.fecha_evento >= CAST(:desde AS TIMESTAMP)) " +
+            "AND (CAST(:hasta AS TIMESTAMP) IS NULL OR a.fecha_evento <= CAST(:hasta AS TIMESTAMP)) " +
+            "ORDER BY a.fecha_evento DESC",
+            nativeQuery = true)
+    List<AuditoriaEvento> findByEmpresaIdConFiltros(
+            @Param("empresaId") Long empresaId,
+            @Param("modulo") String modulo,
+            @Param("tipoOperacion") String tipoOperacion,
+            @Param("nivelCriticidad") String nivelCriticidad,
+            @Param("usuarioId") Long usuarioId,
+            @Param("desde") LocalDateTime desde,
+            @Param("hasta") LocalDateTime hasta
+    );
 }
+

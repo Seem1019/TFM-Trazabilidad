@@ -73,8 +73,8 @@ export function UsuariosPage() {
       await userService.delete(deleteId);
       toast.success('Usuario eliminado correctamente');
       refetch();
-    } catch {
-      toast.error('Error al eliminar el usuario');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar el usuario');
     } finally {
       setDeleteId(null);
     }
@@ -102,8 +102,8 @@ export function UsuariosPage() {
       await userService.cambiarEstado(user.id, !user.activo);
       toast.success(`Usuario ${user.activo ? 'desactivado' : 'activado'}`);
       refetch();
-    } catch {
-      toast.error('Error al cambiar estado');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al cambiar estado');
     }
   };
 
@@ -111,7 +111,7 @@ export function UsuariosPage() {
     if (!dateStr) return '-';
     try {
       return format(new Date(dateStr), 'dd MMM yyyy', { locale: es });
-    } catch {
+    } catch (error) {
       return dateStr;
     }
   };
@@ -120,7 +120,7 @@ export function UsuariosPage() {
     if (!dateStr) return 'Nunca';
     try {
       return format(new Date(dateStr), "dd MMM yyyy 'a las' HH:mm", { locale: es });
-    } catch {
+    } catch (error) {
       return dateStr;
     }
   };

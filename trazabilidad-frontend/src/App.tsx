@@ -40,7 +40,7 @@ import {
 } from '@/pages/trazabilidad';
 
 // Admin
-import { UsuariosPage } from '@/pages/admin';
+import { UsuariosPage, AuditoriaPage, ActividadUsuariosPage } from '@/pages/admin';
 
 // Profile & Settings
 import { PerfilPage } from '@/pages/profile';
@@ -102,6 +102,22 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['ADMIN']}>
                   <UsuariosPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/auditoria"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'AUDITOR']}>
+                  <AuditoriaPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/actividad-usuarios"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN']}>
+                  <ActividadUsuariosPage />
                 </ProtectedRoute>
               }
             />

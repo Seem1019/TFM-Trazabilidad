@@ -40,7 +40,7 @@ export const userService = {
   },
 
   cambiarEstado: async (id: number, activo: boolean): Promise<UserResponse> => {
-    const response = await api.patch<ApiResponse<UserResponse>>(`${BASE_URL}/${id}/estado`, { activo });
+    const response = await api.patch<ApiResponse<UserResponse>>(`${BASE_URL}/${id}/estado?activo=${activo}`);
     return response.data.data;
   },
 };

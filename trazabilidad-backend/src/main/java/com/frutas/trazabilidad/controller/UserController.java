@@ -1,6 +1,7 @@
 package com.frutas.trazabilidad.controller;
 
 import com.frutas.trazabilidad.dto.ApiResponse;
+import com.frutas.trazabilidad.dto.UserActivityResponse;
 import com.frutas.trazabilidad.dto.UserRequest;
 import com.frutas.trazabilidad.dto.UserResponse;
 import com.frutas.trazabilidad.security.JwtUtil;
@@ -95,6 +96,17 @@ public class UserController {
         Long empresaId = jwtUtil.extractEmpresaId(token.substring(7));
         userService.eliminar(id, empresaId);
         return ResponseEntity.ok(ApiResponse.success(null, "Usuario eliminado exitosamente"));
+    }
+
+    @GetMapping("/actividad")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR')")
+    @Operation(summary = "Actividad de usuarios", description = "Obtiene la actividad y estado de sesión de todos los usuarios de la empresa")
+    public ResponseEntity<ApiResponse<List<UserActivityResponse>>> obtenerActividad(
+            @RequestHeader("Authorization") String token) {
+
+        Long empresaId = jwtUtil.extractEmpresaId(token.substring(7));
+        List<UserActivityResponse> actividad = userService.obtenerActividadUsuarios(empresaId);
+        return ResponseEntity.ok(ApiResponse.success(actividad, "Actividad de usuarios obtenida exitosamente"));
     }
 
     @PatchMapping("/{id}/estado")

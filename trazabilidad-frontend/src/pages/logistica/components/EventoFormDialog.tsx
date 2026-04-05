@@ -113,7 +113,7 @@ export function EventoFormDialog({
       const envios = await envioService.getAll();
       // Solo mostrar envíos que no estén cerrados
       setEnviosDisponibles(envios.filter((e) => !e.hashCierre));
-    } catch {
+    } catch (error) {
       // Silent fail
     } finally {
       setLoadingEnvios(false);
