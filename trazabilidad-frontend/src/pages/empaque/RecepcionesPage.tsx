@@ -60,8 +60,8 @@ export function RecepcionesPage() {
       await recepcionService.delete(deleteId);
       toast.success('Recepción eliminada correctamente');
       refetch();
-    } catch {
-      toast.error('Error al eliminar la recepción');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar la recepción');
     } finally {
       setDeleteId(null);
     }
@@ -78,8 +78,8 @@ export function RecepcionesPage() {
       }
       setIsFormOpen(false);
       refetch();
-    } catch {
-      toast.error(selectedRecepcion ? 'Error al actualizar' : 'Error al registrar');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (selectedRecepcion ? 'Error al actualizar' : 'Error al registrar'));
     }
   };
 

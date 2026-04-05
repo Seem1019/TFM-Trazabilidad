@@ -110,8 +110,8 @@ export function DocumentosPage() {
       await documentoExportacionService.delete(deleteId);
       toast.success('Documento eliminado correctamente');
       refetch();
-    } catch {
-      toast.error('Error al eliminar el documento');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar el documento');
     } finally {
       setDeleteId(null);
     }
@@ -128,8 +128,8 @@ export function DocumentosPage() {
       }
       setIsFormOpen(false);
       refetch();
-    } catch {
-      toast.error(selectedDocumento ? 'Error al actualizar' : 'Error al crear');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (selectedDocumento ? 'Error al actualizar' : 'Error al crear'));
     }
   };
 
@@ -138,8 +138,8 @@ export function DocumentosPage() {
       await documentoExportacionService.cambiarEstado(id, estado);
       toast.success(`Estado cambiado a ${estado}`);
       refetch();
-    } catch {
-      toast.error('Error al cambiar estado');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al cambiar estado');
     }
   };
 

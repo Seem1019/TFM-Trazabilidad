@@ -76,8 +76,8 @@ export function EnviosPage() {
       await envioService.delete(deleteId);
       toast.success('Envío eliminado correctamente');
       refetch();
-    } catch {
-      toast.error('Error al eliminar el envío');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar el envío');
     } finally {
       setDeleteId(null);
     }
@@ -89,8 +89,8 @@ export function EnviosPage() {
       await envioService.cerrar(cerrarId);
       toast.success('Envío cerrado correctamente. Hash de integridad generado.');
       refetch();
-    } catch {
-      toast.error('Error al cerrar el envío');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al cerrar el envío');
     } finally {
       setCerrarId(null);
     }
@@ -107,8 +107,8 @@ export function EnviosPage() {
       }
       setIsFormOpen(false);
       refetch();
-    } catch {
-      toast.error(selectedEnvio ? 'Error al actualizar' : 'Error al crear');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (selectedEnvio ? 'Error al actualizar' : 'Error al crear'));
     }
   };
 
@@ -117,8 +117,8 @@ export function EnviosPage() {
       await envioService.cambiarEstado(id, estado);
       toast.success(`Estado cambiado a ${ESTADO_ENVIO_LABELS[estado as keyof typeof ESTADO_ENVIO_LABELS] || estado}`);
       refetch();
-    } catch {
-      toast.error('Error al cambiar estado');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al cambiar estado');
     }
   };
 

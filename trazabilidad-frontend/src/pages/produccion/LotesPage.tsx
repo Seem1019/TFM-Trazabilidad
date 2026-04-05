@@ -59,8 +59,8 @@ export function LotesPage() {
       await loteService.delete(deleteId);
       toast.success('Lote eliminado correctamente');
       refetch();
-    } catch {
-      toast.error('Error al eliminar el lote');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar el lote');
     } finally {
       setDeleteId(null);
     }
@@ -77,8 +77,8 @@ export function LotesPage() {
       }
       setIsFormOpen(false);
       refetch();
-    } catch {
-      toast.error(selectedLote ? 'Error al actualizar el lote' : 'Error al crear el lote');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (selectedLote ? 'Error al actualizar el lote' : 'Error al crear el lote'));
     }
   };
 

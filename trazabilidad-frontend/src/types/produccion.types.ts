@@ -94,13 +94,11 @@ export interface CertificacionRequest {
   numeroCertificado?: string;
   fechaEmision: string;
   fechaVencimiento: string;
-  estado?: string;
-  alcance?: string;
   urlDocumento?: string;
   observaciones?: string;
 }
 
-export interface Certificacion extends Omit<CertificacionRequest, 'fincaId' | 'estado'> {
+export interface Certificacion extends Omit<CertificacionRequest, 'fincaId'> {
   id: number;
   fincaId: number;
   fincaNombre: string;
@@ -119,21 +117,36 @@ export interface ActividadAgronomicarRequest {
   loteId: number;
   tipoActividad: TipoActividad;
   fechaActividad: string;
-  descripcion?: string;
-  productosUtilizados?: string;
-  dosificacion?: string;
+  productoAplicado?: string;
+  dosisoCantidad?: string;
+  unidadMedida?: string;
+  metodoAplicacion?: string;
   responsable?: string;
+  numeroRegistroProducto?: string;
+  intervaloSeguridadDias?: number;
   observaciones?: string;
 }
 
-export interface ActividadAgronomica extends Omit<ActividadAgronomicarRequest, 'loteId'> {
+export interface ActividadAgronomica {
   id: number;
   loteId: number;
   loteNombre: string;
   loteCodigoLote: string;
+  tipoActividad: TipoActividad;
+  fechaActividad: string;
+  productoAplicado?: string;
+  dosisoCantidad?: string;
+  unidadMedida?: string;
+  metodoAplicacion?: string;
+  responsable?: string;
+  numeroRegistroProducto?: string;
+  intervaloSeguridadDias?: number;
+  observaciones?: string;
   activo: boolean;
   createdAt: string;
   updatedAt: string;
+  fechaFinIntervaloSeguridad?: string;
+  intervaloSeguridadCumplido?: boolean;
 }
 
 // ==================== TIPOS DE FRUTA (Enum del backend) ====================

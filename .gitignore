@@ -666,3 +666,6 @@
 /trazabilidad-frontend/test-results/traceability-Traceability--90469-traceability-data-integrity-firefox/video.webm
 /trazabilidad-frontend/test-results/traceability-Traceability--90469-traceability-data-integrity-Mobile-Chrome/video.webm
 /trazabilidad-frontend/test-results/traceability-Traceability--90469-traceability-data-integrity-webkit/video.webm
+
+# FUSE temporary files
+.fuse_hidden*

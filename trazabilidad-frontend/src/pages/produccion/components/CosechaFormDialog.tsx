@@ -30,15 +30,24 @@ const UNIDADES = ['kg', 'lb', 'ton', 'cajas', 'canastillas'] as const;
 const cosechaSchema = z.object({
   loteId: z.string().min(1, 'Seleccione un lote'),
   fechaCosecha: z.string().min(1, 'La fecha es requerida'),
-  cantidadCosechada: z.string().min(1, 'La cantidad es requerida'),
+  cantidadCosechada: z.string().min(1, 'La cantidad es requerida').refine(
+    (val) => !isNaN(Number(val)) && Number(val) > 0,
+    'Ingrese una cantidad válida mayor a 0'
+  ),
   unidadMedida: z.string().min(1, 'Seleccione una unidad'),
   calidadInicial: z.string().optional(),
-  estadoFruta: z.string().max(100).optional(),
-  responsableCosecha: z.string().max(150).optional(),
-  numeroTrabajadores: z.string().optional(),
+  estadoFruta: z.string().max(100, 'Máximo 100 caracteres').optional(),
+  responsableCosecha: z.string().max(150, 'Máximo 150 caracteres').optional(),
+  numeroTrabajadores: z.string().optional().refine(
+    (val) => !val || (!isNaN(Number(val)) && Number(val) > 0 && Number.isInteger(Number(val))),
+    'Ingrese un número entero positivo'
+  ),
   horaInicio: z.string().optional(),
   horaFin: z.string().optional(),
-  temperaturaAmbiente: z.string().optional(),
+  temperaturaAmbiente: z.string().optional().refine(
+    (val) => !val || !isNaN(Number(val)),
+    'Ingrese una temperatura válida'
+  ),
   observaciones: z.string().optional(),
 });
 

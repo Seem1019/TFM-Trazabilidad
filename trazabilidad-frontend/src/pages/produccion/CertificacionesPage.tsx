@@ -63,8 +63,8 @@ export function CertificacionesPage() {
       try {
         const data = await certificacionService.getByFinca(Number(selectedFincaId));
         setCertificaciones(data);
-      } catch {
-        toast.error('Error al cargar certificaciones');
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Error al cargar certificaciones');
         setCertificaciones([]);
       } finally {
         setIsLoadingCerts(false);
@@ -80,8 +80,8 @@ export function CertificacionesPage() {
       try {
         const data = await certificacionService.getByFinca(Number(selectedFincaId));
         setCertificaciones(data);
-      } catch {
-        toast.error('Error al cargar certificaciones');
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Error al cargar certificaciones');
       } finally {
         setIsLoadingCerts(false);
       }
@@ -104,8 +104,8 @@ export function CertificacionesPage() {
       await certificacionService.delete(deleteId);
       toast.success('Certificación eliminada correctamente');
       refetch();
-    } catch {
-      toast.error('Error al eliminar la certificación');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar la certificación');
     } finally {
       setDeleteId(null);
     }
@@ -131,8 +131,8 @@ export function CertificacionesPage() {
       if (selectedCertificacion) {
         refetch();
       }
-    } catch {
-      toast.error(selectedCertificacion ? 'Error al actualizar' : 'Error al registrar');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (selectedCertificacion ? 'Error al actualizar' : 'Error al registrar'));
     }
   };
 

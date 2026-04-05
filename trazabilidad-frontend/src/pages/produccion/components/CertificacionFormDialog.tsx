@@ -34,17 +34,14 @@ const TIPOS_CERTIFICACION = [
   'OTRO',
 ];
 
-const ESTADOS_CERTIFICACION = ['VIGENTE', 'VENCIDA', 'SUSPENDIDA', 'EN_PROCESO'];
-
 const certificacionSchema = z.object({
   fincaId: z.string().min(1, 'Seleccione una finca'),
   tipoCertificacion: z.string().min(1, 'El tipo es requerido'),
-  entidadEmisora: z.string().min(1, 'La entidad emisora es requerida').max(200),
-  numeroCertificado: z.string().max(100).optional(),
+  entidadEmisora: z.string().min(1, 'La entidad emisora es requerida').max(200, 'Máximo 200 caracteres'),
+  numeroCertificado: z.string().max(100, 'Máximo 100 caracteres').optional(),
   fechaEmision: z.string().min(1, 'La fecha de emisión es requerida'),
   fechaVencimiento: z.string().min(1, 'La fecha de vencimiento es requerida'),
-  estado: z.string().min(1, 'El estado es requerido'),
-  alcance: z.string().max(500).optional(),
+  urlDocumento: z.string().max(500, 'Máximo 500 caracteres').optional(),
   observaciones: z.string().optional(),
 });
 
@@ -81,15 +78,13 @@ export function CertificacionFormDialog({
       numeroCertificado: '',
       fechaEmision: '',
       fechaVencimiento: '',
-      estado: 'VIGENTE',
-      alcance: '',
+      urlDocumento: '',
       observaciones: '',
     },
   });
 
   const watchedFincaId = watch('fincaId');
   const watchedTipo = watch('tipoCertificacion');
-  const watchedEstado = watch('estado');
 
   useEffect(() => {
     if (open) {
@@ -101,8 +96,7 @@ export function CertificacionFormDialog({
           numeroCertificado: certificacion.numeroCertificado || '',
           fechaEmision: certificacion.fechaEmision?.split('T')[0] || '',
           fechaVencimiento: certificacion.fechaVencimiento?.split('T')[0] || '',
-          estado: certificacion.estado || 'VIGENTE',
-          alcance: certificacion.alcance || '',
+          urlDocumento: certificacion.urlDocumento || '',
           observaciones: certificacion.observaciones || '',
         });
       } else {
@@ -113,8 +107,7 @@ export function CertificacionFormDialog({
           numeroCertificado: '',
           fechaEmision: new Date().toISOString().split('T')[0],
           fechaVencimiento: '',
-          estado: 'VIGENTE',
-          alcance: '',
+          urlDocumento: '',
           observaciones: '',
         });
       }
@@ -129,8 +122,7 @@ export function CertificacionFormDialog({
       numeroCertificado: data.numeroCertificado || undefined,
       fechaEmision: data.fechaEmision,
       fechaVencimiento: data.fechaVencimiento,
-      estado: data.estado,
-      alcance: data.alcance || undefined,
+      urlDocumento: data.urlDocumento || undefined,
       observaciones: data.observaciones || undefined,
     };
     await onSubmit(cleanData);
@@ -258,36 +250,13 @@ export function CertificacionFormDialog({
               )}
             </div>
 
-            {/* Estado */}
-            <div className="space-y-2">
-              <Label htmlFor="estado">Estado *</Label>
-              <Select
-                value={watchedEstado}
-                onValueChange={(value) => setValue('estado', value)}
-              >
-                <SelectTrigger className={errors.estado ? 'border-destructive' : ''}>
-                  <SelectValue placeholder="Seleccione estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ESTADOS_CERTIFICACION.map((estado) => (
-                    <SelectItem key={estado} value={estado}>
-                      {estado.replace(/_/g, ' ')}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.estado && (
-                <p className="text-sm text-destructive">{errors.estado.message}</p>
-              )}
-            </div>
-
-            {/* Alcance */}
-            <div className="space-y-2">
-              <Label htmlFor="alcance">Alcance</Label>
+            {/* URL Documento */}
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="urlDocumento">URL del Documento</Label>
               <Input
-                id="alcance"
-                placeholder="Producción de banano orgánico"
-                {...register('alcance')}
+                id="urlDocumento"
+                placeholder="https://ejemplo.com/certificado.pdf"
+                {...register('urlDocumento')}
               />
             </div>
 

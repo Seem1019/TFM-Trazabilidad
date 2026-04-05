@@ -69,8 +69,8 @@ export function PalletsPage() {
       await palletService.delete(deleteId);
       toast.success('Pallet eliminado correctamente');
       refetch();
-    } catch {
-      toast.error('Error al eliminar el pallet');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar el pallet');
     } finally {
       setDeleteId(null);
     }
@@ -87,8 +87,8 @@ export function PalletsPage() {
       }
       setIsFormOpen(false);
       refetch();
-    } catch {
-      toast.error(selectedPallet ? 'Error al actualizar' : 'Error al crear');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (selectedPallet ? 'Error al actualizar' : 'Error al crear'));
     }
   };
 
@@ -97,8 +97,8 @@ export function PalletsPage() {
       await palletService.cambiarEstado(id, estado);
       toast.success(`Estado cambiado a ${estado}`);
       refetch();
-    } catch {
-      toast.error('Error al cambiar estado');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al cambiar estado');
     }
   };
 

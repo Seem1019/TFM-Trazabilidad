@@ -63,8 +63,8 @@ export function ActividadesPage() {
       try {
         const data = await actividadService.getByLote(Number(selectedLoteId));
         setActividades(data);
-      } catch {
-        toast.error('Error al cargar actividades');
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Error al cargar actividades');
         setActividades([]);
       } finally {
         setIsLoadingActividades(false);
@@ -80,8 +80,8 @@ export function ActividadesPage() {
       try {
         const data = await actividadService.getByLote(Number(selectedLoteId));
         setActividades(data);
-      } catch {
-        toast.error('Error al cargar actividades');
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Error al cargar actividades');
       } finally {
         setIsLoadingActividades(false);
       }
@@ -104,8 +104,8 @@ export function ActividadesPage() {
       await actividadService.delete(deleteId);
       toast.success('Actividad eliminada correctamente');
       refetch();
-    } catch {
-      toast.error('Error al eliminar la actividad');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar la actividad');
     } finally {
       setDeleteId(null);
     }
@@ -131,8 +131,8 @@ export function ActividadesPage() {
       if (selectedActividad) {
         refetch();
       }
-    } catch {
-      toast.error(selectedActividad ? 'Error al actualizar' : 'Error al registrar');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (selectedActividad ? 'Error al actualizar la actividad' : 'Error al registrar la actividad'));
     }
   };
 
@@ -182,27 +182,28 @@ export function ActividadesPage() {
       ),
     },
     {
-      key: 'descripcion',
-      header: 'Descripción',
+      key: 'productoAplicado',
+      header: 'Producto Aplicado',
       render: (act) => (
         <span className="max-w-[200px] truncate block">
-          {act.descripcion || '-'}
+          {act.productoAplicado || '-'}
         </span>
       ),
     },
     {
-      key: 'productosUtilizados',
-      header: 'Productos',
-      render: (act) => (
-        <span className="max-w-[150px] truncate block">
-          {act.productosUtilizados || '-'}
-        </span>
-      ),
+      key: 'dosisoCantidad',
+      header: 'Dosis/Cantidad',
+      render: (act) => {
+        if (!act.dosisoCantidad) return '-';
+        return act.unidadMedida
+          ? `${act.dosisoCantidad} ${act.unidadMedida}`
+          : act.dosisoCantidad;
+      },
     },
     {
-      key: 'dosificacion',
-      header: 'Dosificación',
-      render: (act) => act.dosificacion || '-',
+      key: 'metodoAplicacion',
+      header: 'Método',
+      render: (act) => act.metodoAplicacion || '-',
     },
     {
       key: 'responsable',
@@ -314,8 +315,8 @@ export function ActividadesPage() {
         <DataTable
           data={actividades}
           columns={columns}
-          searchKeys={['tipoActividad', 'descripcion', 'responsable', 'productosUtilizados']}
-          searchPlaceholder="Buscar por tipo, descripción o responsable..."
+          searchKeys={['tipoActividad', 'productoAplicado', 'responsable', 'metodoAplicacion']}
+          searchPlaceholder="Buscar por tipo, producto o responsable..."
         />
       )}
 

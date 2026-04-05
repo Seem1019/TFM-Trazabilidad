@@ -2,6 +2,7 @@ package com.frutas.trazabilidad.module.produccion.repository;
 
 import com.frutas.trazabilidad.module.produccion.entity.Lote;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -74,4 +75,13 @@ public interface LoteRepository extends JpaRepository<Lote, Long> {
     @Query("SELECT CASE WHEN COUNT(l) > 0 THEN true ELSE false END " +
             "FROM Lote l WHERE l.id = :loteId AND l.finca.empresa.id = :empresaId")
     boolean existsByIdAndEmpresaId(@Param("loteId") Long loteId, @Param("empresaId") Long empresaId);
+
+    /**
+     * Actualiza el estado del lote directamente con JPQL.
+     * Evita ConcurrentModificationException al no pasar por el entity graph
+     * cuando hay entidades relacionadas con CascadeType.ALL pendientes de flush.
+     */
+    @Modifying
+    @Query("UPDATE Lote l SET l.estadoLote = :estado, l.updatedAt = CURRENT_TIMESTAMP WHERE l.id = :id")
+    void updateEstadoLote(@Param("id") Long id, @Param("estado") String estado);
 }

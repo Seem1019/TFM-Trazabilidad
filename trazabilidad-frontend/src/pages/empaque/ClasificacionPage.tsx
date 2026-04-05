@@ -63,8 +63,8 @@ export function ClasificacionPage() {
       await clasificacionService.delete(deleteId);
       toast.success('Clasificación eliminada correctamente');
       refetch();
-    } catch {
-      toast.error('Error al eliminar la clasificación');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar la clasificación');
     } finally {
       setDeleteId(null);
     }
@@ -81,8 +81,8 @@ export function ClasificacionPage() {
       }
       setIsFormOpen(false);
       refetch();
-    } catch {
-      toast.error(selectedClasificacion ? 'Error al actualizar' : 'Error al registrar');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (selectedClasificacion ? 'Error al actualizar' : 'Error al registrar'));
     }
   };
 

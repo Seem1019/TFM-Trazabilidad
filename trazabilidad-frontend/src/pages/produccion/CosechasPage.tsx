@@ -61,8 +61,8 @@ export function CosechasPage() {
       await cosechaService.delete(deleteId);
       toast.success('Cosecha eliminada correctamente');
       refetch();
-    } catch {
-      toast.error('Error al eliminar la cosecha');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar la cosecha');
     } finally {
       setDeleteId(null);
     }
@@ -79,8 +79,8 @@ export function CosechasPage() {
       }
       setIsFormOpen(false);
       refetch();
-    } catch {
-      toast.error(selectedCosecha ? 'Error al actualizar' : 'Error al registrar la cosecha');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (selectedCosecha ? 'Error al actualizar la cosecha' : 'Error al registrar la cosecha'));
     }
   };
 
