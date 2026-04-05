@@ -119,4 +119,25 @@ public interface AuditoriaEventoRepository extends JpaRepository<AuditoriaEvento
      */
     @Query("SELECT COUNT(a) FROM AuditoriaEvento a WHERE a.empresaId = :empresaId AND a.tipoEntidad = :tipoEntidad")
     long countByEmpresaIdAndTipoEntidad(@Param("empresaId") Long empresaId, @Param("tipoEntidad") String tipoEntidad);
+
+    /**
+     * Lista eventos con filtros combinados opcionales.
+     */
+    @Query("SELECT a FROM AuditoriaEvento a WHERE a.empresaId = :empresaId " +
+            "AND (:modulo IS NULL OR a.modulo = :modulo) " +
+            "AND (:tipoOperacion IS NULL OR a.tipoOperacion = :tipoOperacion) " +
+            "AND (:nivelCriticidad IS NULL OR a.nivelCriticidad = :nivelCriticidad) " +
+            "AND (:usuarioId IS NULL OR a.usuario.id = :usuarioId) " +
+            "AND (:desde IS NULL OR a.fechaEvento >= :desde) " +
+            "AND (:hasta IS NULL OR a.fechaEvento <= :hasta) " +
+            "ORDER BY a.fechaEvento DESC")
+    List<AuditoriaEvento> findByEmpresaIdConFiltros(
+            @Param("empresaId") Long empresaId,
+            @Param("modulo") String modulo,
+            @Param("tipoOperacion") String tipoOperacion,
+            @Param("nivelCriticidad") String nivelCriticidad,
+            @Param("usuarioId") Long usuarioId,
+            @Param("desde") LocalDateTime desde,
+            @Param("hasta") LocalDateTime hasta
+    );
 }

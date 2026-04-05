@@ -5,10 +5,12 @@ import com.frutas.trazabilidad.module.logistica.service.AuditoriaEventoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -25,10 +27,17 @@ public class AuditoriaEventoController {
     private final AuditoriaEventoService auditoriaService;
 
     @GetMapping
-    @Operation(summary = "Listar eventos de auditoría", description = "Lista todos los eventos de auditoría de la empresa")
+    @Operation(summary = "Listar eventos de auditoría", description = "Lista todos los eventos de auditoría de la empresa con filtros opcionales")
     @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
-    public ResponseEntity<List<AuditoriaEventoResponse>> listar() {
-        List<AuditoriaEventoResponse> eventos = auditoriaService.listarPorEmpresa();
+    public ResponseEntity<List<AuditoriaEventoResponse>> listar(
+            @RequestParam(required = false) String modulo,
+            @RequestParam(required = false) String tipoOperacion,
+            @RequestParam(required = false) String nivelCriticidad,
+            @RequestParam(required = false) Long usuarioId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
+        List<AuditoriaEventoResponse> eventos = auditoriaService.listarConFiltros(
+                modulo, tipoOperacion, nivelCriticidad, usuarioId, desde, hasta);
         return ResponseEntity.ok(eventos);
     }
 

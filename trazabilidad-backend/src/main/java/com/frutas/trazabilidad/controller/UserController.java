@@ -1,6 +1,7 @@
 package com.frutas.trazabilidad.controller;
 
 import com.frutas.trazabilidad.dto.ApiResponse;
+import com.frutas.trazabilidad.dto.UserActivityResponse;
 import com.frutas.trazabilidad.dto.UserRequest;
 import com.frutas.trazabilidad.dto.UserResponse;
 import com.frutas.trazabilidad.security.JwtUtil;
@@ -108,5 +109,16 @@ public class UserController {
         Long empresaId = jwtUtil.extractEmpresaId(token.substring(7));
         UserResponse user = userService.cambiarEstado(id, activo, empresaId);
         return ResponseEntity.ok(ApiResponse.success(user, "Estado del usuario actualizado exitosamente"));
+    }
+
+    @GetMapping("/actividad")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Actividad de usuarios", description = "Obtiene la actividad de todos los usuarios (sesiones, último acceso, bloqueos)")
+    public ResponseEntity<ApiResponse<List<UserActivityResponse>>> obtenerActividad(
+            @RequestHeader("Authorization") String token) {
+
+        Long empresaId = jwtUtil.extractEmpresaId(token.substring(7));
+        List<UserActivityResponse> actividad = userService.obtenerActividadUsuarios(empresaId);
+        return ResponseEntity.ok(ApiResponse.success(actividad, "Actividad de usuarios obtenida exitosamente"));
     }
 }

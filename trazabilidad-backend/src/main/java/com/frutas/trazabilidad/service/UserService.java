@@ -1,5 +1,6 @@
 package com.frutas.trazabilidad.service;
 
+import com.frutas.trazabilidad.dto.UserActivityResponse;
 import com.frutas.trazabilidad.dto.UserRequest;
 import com.frutas.trazabilidad.dto.UserResponse;
 import com.frutas.trazabilidad.entity.Empresa;
@@ -8,6 +9,7 @@ import com.frutas.trazabilidad.exception.ResourceNotFoundException;
 import com.frutas.trazabilidad.mapper.UserMapper;
 import com.frutas.trazabilidad.module.logistica.service.AuditoriaEventoService;
 import com.frutas.trazabilidad.repository.EmpresaRepository;
+import com.frutas.trazabilidad.repository.RefreshTokenRepository;
 import com.frutas.trazabilidad.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,6 +34,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final EmpresaRepository empresaRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final UserMapper mapper;
     private final PasswordEncoder passwordEncoder;
     private final AuditoriaEventoService auditoriaService;
@@ -163,6 +167,28 @@ public class UserService {
         eventPublisher.publishEvent(new UserAuditEvent(this, "UPDATE", updated.getId(), updated.getEmail(), obtenerUsuarioActualId()));
 
         return mapper.toResponse(updated);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserActivityResponse> obtenerActividadUsuarios(Long empresaId) {
+        log.info("Obteniendo actividad de usuarios para empresa ID: {}", empresaId);
+        List<User> usuarios = userRepository.findByEmpresaId(empresaId);
+        Instant now = Instant.now();
+
+        return usuarios.stream().map(user -> UserActivityResponse.builder()
+                .id(user.getId())
+                .nombre(user.getNombre())
+                .apellido(user.getApellido())
+                .email(user.getEmail())
+                .rol(user.getRol())
+                .activo(user.getActivo())
+                .ultimoAcceso(user.getUltimoAcceso())
+                .intentosFallidos(user.getIntentosFallidos())
+                .bloqueadoHasta(user.getBloqueadoHasta())
+                .bloqueado(user.estaBloqueadoTemporalmente())
+                .sesionesActivas(refreshTokenRepository.countActiveTokensByUserId(user.getId(), now))
+                .build()
+        ).collect(Collectors.toList());
     }
 
     private void validarPertenenciaEmpresa(User user, Long empresaId) {

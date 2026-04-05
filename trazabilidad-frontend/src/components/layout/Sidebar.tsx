@@ -18,6 +18,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Leaf,
+  ScrollText,
+  Activity,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/store/uiStore';
@@ -88,6 +90,8 @@ const navGroups: NavGroup[] = [
     title: 'Administración',
     items: [
       { title: 'Usuarios', href: '/usuarios', icon: Users, module: 'usuarios' },
+      { title: 'Auditoría', href: '/auditoria', icon: ScrollText, module: 'auditoria' },
+      { title: 'Actividad', href: '/actividad-usuarios', icon: Activity, module: 'actividad-usuarios' },
     ],
   },
 ];

@@ -18,5 +18,6 @@ export { documentoExportacionService } from './documentoExportacionService';
 export { trazabilidadService } from './trazabilidadService';
 // Administración
 export { userService } from './userService';
+export { auditoriaService } from './auditoriaService';
 // Dashboard
 export { dashboardService } from './dashboardService';

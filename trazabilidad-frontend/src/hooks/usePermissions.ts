@@ -26,7 +26,9 @@ export type Module =
   | 'eventos'
   | 'documentos'
   | 'trazabilidad'
-  | 'usuarios';
+  | 'usuarios'
+  | 'auditoria'
+  | 'actividad-usuarios';
 
 /**
  * Matriz de permisos RBAC según Anexo J del TFM
@@ -161,6 +163,20 @@ const PERMISSIONS_MATRIX: Record<Module, Record<TipoRol, Permission[]>> = {
     OPERADOR_LOGISTICA: [],
     AUDITOR: [],
   },
+  auditoria: {
+    ADMIN: ['read'],
+    PRODUCTOR: [],
+    OPERADOR_PLANTA: [],
+    OPERADOR_LOGISTICA: [],
+    AUDITOR: ['read'],
+  },
+  'actividad-usuarios': {
+    ADMIN: ['read'],
+    PRODUCTOR: [],
+    OPERADOR_PLANTA: [],
+    OPERADOR_LOGISTICA: [],
+    AUDITOR: [],
+  },
 };
 
 /**
@@ -183,6 +199,8 @@ export const MODULE_ACCESS: Record<Module, TipoRol[]> = {
   documentos: ['ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR'],
   trazabilidad: ['ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR'],
   usuarios: ['ADMIN'],
+  auditoria: ['ADMIN', 'AUDITOR'],
+  'actividad-usuarios': ['ADMIN'],
 };
 
 /**
@@ -291,6 +309,8 @@ export function getRouteAllowedRoles(path: string): TipoRol[] | undefined {
     '/documentos': 'documentos',
     '/trazabilidad': 'trazabilidad',
     '/usuarios': 'usuarios',
+    '/auditoria': 'auditoria',
+    '/actividad-usuarios': 'actividad-usuarios',
   };
 
   const module = routeToModule[path];
