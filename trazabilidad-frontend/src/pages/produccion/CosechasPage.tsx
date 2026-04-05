@@ -87,7 +87,7 @@ export function CosechasPage() {
   const formatDate = (dateStr: string) => {
     try {
       return format(new Date(dateStr), 'dd MMM yyyy', { locale: es });
-    } catch {
+    } catch (error) {
       return dateStr;
     }
   };

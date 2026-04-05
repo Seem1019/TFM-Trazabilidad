@@ -77,5 +77,3 @@ export const auditoriaService = {
     return response.data.data;
   },
 };
-
-export default auditoriaService;

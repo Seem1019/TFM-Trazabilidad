@@ -35,7 +35,7 @@ export function ActividadUsuariosPage() {
     if (!dateStr) return 'Nunca';
     try {
       return format(new Date(dateStr), "dd MMM yyyy 'a las' HH:mm", { locale: es });
-    } catch {
+    } catch (error) {
       return dateStr;
     }
   };
@@ -44,7 +44,7 @@ export function ActividadUsuariosPage() {
     if (!dateStr) return null;
     try {
       return formatDistanceToNow(new Date(dateStr), { addSuffix: true, locale: es });
-    } catch {
+    } catch (error) {
       return null;
     }
   };
@@ -216,9 +216,8 @@ export function ActividadUsuariosPage() {
         <DataTable
           data={actividad || []}
           columns={columns}
-          searchKeys={['nombre', 'apellido', 'email', 'rol'] as never[]}
+          searchKeys={['nombre', 'apellido', 'email', 'rol']}
           searchPlaceholder="Buscar por nombre, email o rol..."
-          pageSize={15}
         />
       )}
     </div>

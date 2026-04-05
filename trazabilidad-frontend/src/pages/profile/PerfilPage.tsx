@@ -93,8 +93,8 @@ export function PerfilPage() {
       });
 
       toast.success('Perfil actualizado correctamente');
-    } catch {
-      toast.error('Error al actualizar el perfil');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al actualizar el perfil');
     } finally {
       setIsSaving(false);
     }
@@ -117,8 +117,8 @@ export function PerfilPage() {
       toast.success('Contraseña actualizada correctamente');
       setIsPasswordDialogOpen(false);
       resetPassword();
-    } catch {
-      toast.error('Error al cambiar la contraseña');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al cambiar la contraseña');
     }
   };
 

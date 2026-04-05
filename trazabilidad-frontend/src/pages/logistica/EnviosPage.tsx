@@ -126,7 +126,7 @@ export function EnviosPage() {
     if (!dateStr) return '-';
     try {
       return format(new Date(dateStr), 'dd MMM yyyy', { locale: es });
-    } catch {
+    } catch (error) {
       return dateStr;
     }
   };

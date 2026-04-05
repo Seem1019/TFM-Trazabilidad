@@ -42,8 +42,8 @@ export function ForgotPasswordPage() {
     try {
       await authService.requestPasswordReset(data);
       setIsSuccess(true);
-    } catch {
-      setError('Error al enviar el correo. Intente nuevamente.');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Error al enviar el correo. Intente nuevamente.');
     } finally {
       setIsLoading(false);
     }

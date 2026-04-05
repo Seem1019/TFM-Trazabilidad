@@ -98,6 +98,17 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(null, "Usuario eliminado exitosamente"));
     }
 
+    @GetMapping("/actividad")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR')")
+    @Operation(summary = "Actividad de usuarios", description = "Obtiene la actividad y estado de sesión de todos los usuarios de la empresa")
+    public ResponseEntity<ApiResponse<List<UserActivityResponse>>> obtenerActividad(
+            @RequestHeader("Authorization") String token) {
+
+        Long empresaId = jwtUtil.extractEmpresaId(token.substring(7));
+        List<UserActivityResponse> actividad = userService.obtenerActividadUsuarios(empresaId);
+        return ResponseEntity.ok(ApiResponse.success(actividad, "Actividad de usuarios obtenida exitosamente"));
+    }
+
     @PatchMapping("/{id}/estado")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Cambiar estado de usuario", description = "Activa o desactiva un usuario")
@@ -109,16 +120,5 @@ public class UserController {
         Long empresaId = jwtUtil.extractEmpresaId(token.substring(7));
         UserResponse user = userService.cambiarEstado(id, activo, empresaId);
         return ResponseEntity.ok(ApiResponse.success(user, "Estado del usuario actualizado exitosamente"));
-    }
-
-    @GetMapping("/actividad")
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Actividad de usuarios", description = "Obtiene la actividad de todos los usuarios (sesiones, último acceso, bloqueos)")
-    public ResponseEntity<ApiResponse<List<UserActivityResponse>>> obtenerActividad(
-            @RequestHeader("Authorization") String token) {
-
-        Long empresaId = jwtUtil.extractEmpresaId(token.substring(7));
-        List<UserActivityResponse> actividad = userService.obtenerActividadUsuarios(empresaId);
-        return ResponseEntity.ok(ApiResponse.success(actividad, "Actividad de usuarios obtenida exitosamente"));
     }
 }

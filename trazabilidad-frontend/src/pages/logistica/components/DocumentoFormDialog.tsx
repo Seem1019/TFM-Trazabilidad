@@ -98,7 +98,7 @@ export function DocumentoFormDialog({
     try {
       const envios = await envioService.getAll();
       setEnviosDisponibles(envios.filter((e) => !e.hashCierre));
-    } catch {
+    } catch (error) {
       // Silent fail
     } finally {
       setLoadingEnvios(false);

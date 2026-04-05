@@ -85,7 +85,7 @@ export function AuditoriaPage() {
   const formatDateTime = (dateStr: string) => {
     try {
       return format(new Date(dateStr), "dd MMM yyyy HH:mm:ss", { locale: es });
-    } catch {
+    } catch (error) {
       return dateStr;
     }
   };
