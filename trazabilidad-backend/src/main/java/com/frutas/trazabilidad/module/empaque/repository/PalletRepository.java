@@ -69,6 +69,17 @@ public interface PalletRepository extends JpaRepository<Pallet, Long> {
      */
     long countByEmpresaIdAndActivoTrue(Long empresaId);
 
+    /**
+     * Lista pallets que contienen etiquetas de una clasificación dada.
+     */
+    @Query("SELECT DISTINCT p FROM Pallet p " +
+            "JOIN p.etiquetas ep " +
+            "JOIN ep.etiqueta e " +
+            "WHERE e.clasificacion.id = :clasificacionId " +
+            "AND p.activo = true " +
+            "ORDER BY p.fechaPaletizado DESC")
+    List<Pallet> findByClasificacionId(@Param("clasificacionId") Long clasificacionId);
+
     // ==================== MÉTODOS LEGACY (SIN FILTRO - DEPRECADOS) ====================
 
     /**

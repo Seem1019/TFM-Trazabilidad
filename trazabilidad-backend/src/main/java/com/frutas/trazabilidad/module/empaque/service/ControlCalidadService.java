@@ -165,8 +165,19 @@ public class ControlCalidadService {
     }
 
     private void validarPertenenciaEmpresa(ControlCalidad control, Long empresaId) {
-        if (control.getClasificacion() != null &&
-                !control.getClasificacion().getRecepcion().getLote().getFinca().getEmpresa().getId().equals(empresaId)) {
+        boolean perteneceAEmpresa = false;
+
+        if (control.getClasificacion() != null) {
+            perteneceAEmpresa = control.getClasificacion().getRecepcion().getLote()
+                    .getFinca().getEmpresa().getId().equals(empresaId);
+        }
+
+        // Si no se validó por clasificación, verificar vía repositorio
+        if (!perteneceAEmpresa) {
+            perteneceAEmpresa = controlRepository.existsByIdAndEmpresaId(control.getId(), empresaId);
+        }
+
+        if (!perteneceAEmpresa) {
             throw new IllegalArgumentException("El control no pertenece a la empresa del usuario");
         }
     }

@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
 import type { ControlCalidad, ControlCalidadRequest, Clasificacion, Pallet } from '@/types';
 import { TIPOS_CONTROL, RESULTADOS_CONTROL } from '@/types';
+import { palletService } from '@/services';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -60,7 +61,7 @@ export function ControlCalidadFormDialog({
   onOpenChange,
   control,
   clasificaciones,
-  pallets,
+  pallets: allPallets,
   onSubmit,
 }: ControlCalidadFormDialogProps) {
   const {
@@ -94,6 +95,30 @@ export function ControlCalidadFormDialog({
   const selectedClasificacionId = watch('clasificacionId');
   const selectedPalletId = watch('palletId');
   const cumpleEspecificacion = watch('cumpleEspecificacion');
+
+  // Pallets filtrados por clasificación seleccionada
+  const [filteredPallets, setFilteredPallets] = useState<Pallet[]>([]);
+  const [loadingPallets, setLoadingPallets] = useState(false);
+
+  // Cuando cambia la clasificación seleccionada, cargar pallets asociados
+  useEffect(() => {
+    if (selectedClasificacionId && selectedClasificacionId !== '') {
+      setLoadingPallets(true);
+      palletService
+        .getByClasificacion(Number(selectedClasificacionId))
+        .then((pallets) => {
+          setFilteredPallets(pallets);
+        })
+        .catch(() => {
+          // Si falla, mostrar todos los pallets como fallback
+          setFilteredPallets(allPallets);
+        })
+        .finally(() => setLoadingPallets(false));
+    } else {
+      // Sin clasificación seleccionada, mostrar todos los pallets
+      setFilteredPallets(allPallets);
+    }
+  }, [selectedClasificacionId, allPallets]);
 
   useEffect(() => {
     if (open) {
@@ -133,9 +158,10 @@ export function ControlCalidadFormDialog({
           accionCorrectiva: '',
           observaciones: '',
         });
+        setFilteredPallets(allPallets);
       }
     }
-  }, [open, control, reset]);
+  }, [open, control, reset, allPallets]);
 
   const handleFormSubmit = async (data: ControlCalidadFormData) => {
     const cleanData: ControlCalidadRequest = {
@@ -158,6 +184,12 @@ export function ControlCalidadFormDialog({
     await onSubmit(cleanData);
   };
 
+  const handleClasificacionChange = (value: string) => {
+    setValue('clasificacionId', value);
+    // Limpiar pallet cuando cambia la clasificación
+    setValue('palletId', '');
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -168,21 +200,18 @@ export function ControlCalidadFormDialog({
           <DialogDescription>
             {control
               ? 'Modifique los datos del control'
-              : 'Registre un nuevo control de calidad'}
+              : 'Registre un nuevo control de calidad. Seleccione una clasificación para filtrar los pallets relacionados.'}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            {/* Clasificación o Pallet */}
+            {/* Clasificación */}
             <div className="space-y-2">
               <Label htmlFor="clasificacionId">Clasificación</Label>
               <Select
-                value={selectedClasificacionId}
-                onValueChange={(value) => {
-                  setValue('clasificacionId', value);
-                  if (value) setValue('palletId', '');
-                }}
+                value={selectedClasificacionId || undefined}
+                onValueChange={handleClasificacionChange}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccione clasificación" />
@@ -195,28 +224,63 @@ export function ControlCalidadFormDialog({
                   ))}
                 </SelectContent>
               </Select>
+              {selectedClasificacionId && (
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground hover:text-foreground underline"
+                  onClick={() => {
+                    setValue('clasificacionId', '');
+                    setValue('palletId', '');
+                  }}
+                >
+                  Limpiar selección
+                </button>
+              )}
             </div>
 
+            {/* Pallet - Se filtra según la clasificación seleccionada */}
             <div className="space-y-2">
-              <Label htmlFor="palletId">Pallet</Label>
+              <Label htmlFor="palletId">
+                Pallet
+                {selectedClasificacionId && filteredPallets.length > 0 && (
+                  <span className="text-xs text-muted-foreground ml-1">
+                    ({filteredPallets.length} disponibles)
+                  </span>
+                )}
+              </Label>
               <Select
-                value={selectedPalletId}
-                onValueChange={(value) => {
-                  setValue('palletId', value);
-                  if (value) setValue('clasificacionId', '');
-                }}
+                value={selectedPalletId || undefined}
+                onValueChange={(value) => setValue('palletId', value)}
+                disabled={loadingPallets}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccione pallet" />
+                  <SelectValue
+                    placeholder={
+                      loadingPallets
+                        ? 'Cargando pallets...'
+                        : selectedClasificacionId && filteredPallets.length === 0
+                          ? 'Sin pallets para esta clasificación'
+                          : 'Seleccione pallet'
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  {pallets.map((pal) => (
+                  {filteredPallets.map((pal) => (
                     <SelectItem key={pal.id} value={String(pal.id)}>
                       {pal.codigoPallet}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {selectedPalletId && (
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground hover:text-foreground underline"
+                  onClick={() => setValue('palletId', '')}
+                >
+                  Limpiar selección
+                </button>
+              )}
             </div>
 
             {/* Código */}
@@ -251,7 +315,7 @@ export function ControlCalidadFormDialog({
             <div className="space-y-2">
               <Label htmlFor="tipoControl">Tipo de Control *</Label>
               <Select
-                value={watch('tipoControl')}
+                value={watch('tipoControl') || undefined}
                 onValueChange={(value) => setValue('tipoControl', value)}
               >
                 <SelectTrigger className={errors.tipoControl ? 'border-destructive' : ''}>
@@ -274,7 +338,7 @@ export function ControlCalidadFormDialog({
             <div className="space-y-2">
               <Label htmlFor="resultado">Resultado *</Label>
               <Select
-                value={watch('resultado')}
+                value={watch('resultado') || undefined}
                 onValueChange={(value) => setValue('resultado', value)}
               >
                 <SelectTrigger className={errors.resultado ? 'border-destructive' : ''}>

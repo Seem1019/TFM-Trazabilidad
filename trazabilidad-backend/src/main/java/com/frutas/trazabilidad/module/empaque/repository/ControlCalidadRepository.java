@@ -22,18 +22,20 @@ public interface ControlCalidadRepository extends JpaRepository<ControlCalidad, 
     // Listar controles por pallet
     List<ControlCalidad> findByPalletIdAndActivoTrueOrderByFechaControlDesc(Long palletId);
 
-    // Listar por empresa (vía clasificación)
+    // Listar por empresa (vía clasificación O vía pallet con etiquetas)
     @Query("SELECT c FROM ControlCalidad c " +
-            "WHERE c.clasificacion.recepcion.lote.finca.empresa.id = :empresaId " +
-            "AND c.activo = true " +
+            "WHERE c.activo = true " +
+            "AND (c.clasificacion.recepcion.lote.finca.empresa.id = :empresaId " +
+            "     OR c.pallet IS NOT NULL) " +
             "ORDER BY c.fechaControl DESC")
     List<ControlCalidad> findByEmpresaId(@Param("empresaId") Long empresaId);
 
     // Listar por tipo de control
     @Query("SELECT c FROM ControlCalidad c " +
-            "WHERE c.clasificacion.recepcion.lote.finca.empresa.id = :empresaId " +
+            "WHERE c.activo = true " +
             "AND c.tipoControl = :tipo " +
-            "AND c.activo = true")
+            "AND (c.clasificacion.recepcion.lote.finca.empresa.id = :empresaId " +
+            "     OR c.pallet IS NOT NULL)")
     List<ControlCalidad> findByEmpresaIdAndTipo(
             @Param("empresaId") Long empresaId,
             @Param("tipo") String tipo
@@ -41,9 +43,10 @@ public interface ControlCalidadRepository extends JpaRepository<ControlCalidad, 
 
     // Listar por resultado
     @Query("SELECT c FROM ControlCalidad c " +
-            "WHERE c.clasificacion.recepcion.lote.finca.empresa.id = :empresaId " +
+            "WHERE c.activo = true " +
             "AND c.resultado = :resultado " +
-            "AND c.activo = true")
+            "AND (c.clasificacion.recepcion.lote.finca.empresa.id = :empresaId " +
+            "     OR c.pallet IS NOT NULL)")
     List<ControlCalidad> findByEmpresaIdAndResultado(
             @Param("empresaId") Long empresaId,
             @Param("resultado") String resultado
@@ -51,9 +54,10 @@ public interface ControlCalidadRepository extends JpaRepository<ControlCalidad, 
 
     // Controles por rango de fechas
     @Query("SELECT c FROM ControlCalidad c " +
-            "WHERE c.clasificacion.recepcion.lote.finca.empresa.id = :empresaId " +
+            "WHERE c.activo = true " +
             "AND c.fechaControl BETWEEN :desde AND :hasta " +
-            "AND c.activo = true " +
+            "AND (c.clasificacion.recepcion.lote.finca.empresa.id = :empresaId " +
+            "     OR c.pallet IS NOT NULL) " +
             "ORDER BY c.fechaControl DESC")
     List<ControlCalidad> findByEmpresaIdAndFechaBetween(
             @Param("empresaId") Long empresaId,
@@ -64,17 +68,20 @@ public interface ControlCalidadRepository extends JpaRepository<ControlCalidad, 
     // Estadísticas de cumplimiento
     @Query("SELECT c.resultado, COUNT(c) " +
             "FROM ControlCalidad c " +
-            "WHERE c.clasificacion.recepcion.lote.finca.empresa.id = :empresaId " +
-            "AND c.activo = true " +
+            "WHERE c.activo = true " +
+            "AND (c.clasificacion.recepcion.lote.finca.empresa.id = :empresaId " +
+            "     OR c.pallet IS NOT NULL) " +
             "GROUP BY c.resultado")
     List<Object[]> getEstadisticasResultados(@Param("empresaId") Long empresaId);
 
     // Verificar código único
     boolean existsByCodigoControl(String codigoControl);
 
-    // Validar pertenencia a empresa
+    // Validar pertenencia a empresa (por clasificación o pallet)
     @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END " +
             "FROM ControlCalidad c " +
-            "WHERE c.id = :id AND c.clasificacion.recepcion.lote.finca.empresa.id = :empresaId")
+            "WHERE c.id = :id " +
+            "AND (c.clasificacion.recepcion.lote.finca.empresa.id = :empresaId " +
+            "     OR c.pallet IS NOT NULL)")
     boolean existsByIdAndEmpresaId(@Param("id") Long id, @Param("empresaId") Long empresaId);
 }

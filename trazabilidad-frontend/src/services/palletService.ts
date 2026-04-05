@@ -14,6 +14,11 @@ export const palletService = {
     return response.data.data;
   },
 
+  getByClasificacion: async (clasificacionId: number): Promise<Pallet[]> => {
+    const response = await api.get<ApiResponse<Pallet[]>>(`${BASE_URL}/clasificacion/${clasificacionId}`);
+    return response.data.data;
+  },
+
   getByEstado: async (estado: string): Promise<Pallet[]> => {
     const response = await api.get<ApiResponse<Pallet[]>>(`${BASE_URL}/estado/${estado}`);
     return response.data.data;

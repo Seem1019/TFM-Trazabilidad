@@ -72,6 +72,16 @@ public class PalletService {
     }
 
     /**
+     * Lista pallets que contienen etiquetas de una clasificación dada.
+     */
+    @Transactional(readOnly = true)
+    public List<PalletResponse> listarPorClasificacion(Long clasificacionId) {
+        return palletRepository.findByClasificacionId(clasificacionId).stream()
+                .map(mapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Lista pallets listos para envío dentro de una empresa.
      */
     @Transactional(readOnly = true)

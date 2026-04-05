@@ -67,6 +67,15 @@ public class PalletController {
         return ResponseEntity.ok(ApiResponse.success(pallets, "Pallets por tipo de fruta obtenidos"));
     }
 
+    @GetMapping("/clasificacion/{clasificacionId}")
+    @Operation(summary = "Listar pallets por clasificación", description = "Lista pallets que contienen etiquetas de una clasificación")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRODUCTOR', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA', 'AUDITOR')")
+    public ResponseEntity<ApiResponse<List<PalletResponse>>> listarPorClasificacion(
+            @PathVariable Long clasificacionId) {
+        List<PalletResponse> pallets = palletService.listarPorClasificacion(clasificacionId);
+        return ResponseEntity.ok(ApiResponse.success(pallets, "Pallets por clasificación obtenidos"));
+    }
+
     @GetMapping("/listos-envio")
     @Operation(summary = "Listar pallets listos para envío")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERADOR_PLANTA', 'OPERADOR_LOGISTICA')")
