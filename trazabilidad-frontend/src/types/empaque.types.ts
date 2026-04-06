@@ -121,7 +121,7 @@ export interface Pallet extends Omit<PalletRequest, 'etiquetasIds'> {
 }
 
 // ==================== CONTROL DE CALIDAD ====================
-export type TipoControl = 'FISICO' | 'QUIMICO' | 'ORGANOLEPTICO' | 'MICROBIOLOGICO';
+export type TipoControl = 'VISUAL' | 'LABORATORIO' | 'SANITARIO' | 'EMPAQUE';
 export type ResultadoControl = 'APROBADO' | 'RECHAZADO' | 'CONDICIONAL';
 
 export interface ControlCalidadRequest {
@@ -159,10 +159,10 @@ export const CALIDADES = ['PREMIUM', 'PRIMERA', 'SEGUNDA', 'TERCERA', 'DESCARTE'
 export const CALIBRES = ['EXTRA_GRANDE', 'GRANDE', 'MEDIANO', 'PEQUENO'] as const;
 
 export const TIPOS_CONTROL = [
-  'FISICO',
-  'QUIMICO',
-  'ORGANOLEPTICO',
-  'MICROBIOLOGICO',
+  'VISUAL',
+  'LABORATORIO',
+  'SANITARIO',
+  'EMPAQUE',
 ] as const;
 
 export const RESULTADOS_CONTROL = ['APROBADO', 'RECHAZADO', 'CONDICIONAL'] as const;
