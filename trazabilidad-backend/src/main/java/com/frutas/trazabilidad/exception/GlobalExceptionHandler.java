@@ -283,6 +283,36 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
 
+    // ==================== Excepciones de lógica de negocio ====================
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest request) {
+        log.warn("IllegalArgumentException - Path: {} - Error: {}", request.getRequestURI(), ex.getMessage());
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .success(false)
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .requestId(MDC.get("requestId"))
+                .build();
+
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalState(IllegalStateException ex, HttpServletRequest request) {
+        log.warn("IllegalStateException - Path: {} - Error: {}", request.getRequestURI(), ex.getMessage());
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .success(false)
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .requestId(MDC.get("requestId"))
+                .build();
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
     // ==================== Catch-all ====================
 
     @ExceptionHandler(Exception.class)

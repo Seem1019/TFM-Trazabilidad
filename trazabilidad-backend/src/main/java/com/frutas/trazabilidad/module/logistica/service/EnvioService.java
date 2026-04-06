@@ -55,15 +55,16 @@ public class EnvioService {
         // Crear entidad
         Envio envio = envioMapper.toEntity(request, usuario);
 
+        // Guardar primero para obtener ID (necesario antes de asignar pallets)
+        envio = envioRepository.save(envio);
+
         // Asignar pallets si se proporcionan
         if (request.getPalletsIds() != null && !request.getPalletsIds().isEmpty()) {
             asignarPallets(envio, request.getPalletsIds(), empresaId);
         }
 
-        // Calcular totales
+        // Calcular totales después de asignar pallets
         calcularTotales(envio);
-
-        // Guardar
         envio = envioRepository.save(envio);
 
         // Auditar
@@ -295,10 +296,11 @@ public class EnvioService {
                 throw new IllegalStateException("El pallet " + pallet.getCodigoPallet() + " no está disponible para asignación");
             }
 
-            // Asignar al envío
+            // Asignar al envío y agregar a la lista para calcularTotales
             pallet.setEnvio(envio);
             pallet.setEstadoPallet("ASIGNADO_ENVIO");
             palletRepository.save(pallet);
+            envio.getPallets().add(pallet);
         }
     }
 

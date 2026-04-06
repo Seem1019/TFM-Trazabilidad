@@ -43,7 +43,7 @@ public class User implements UserDetails {
     @Column(length = 20)
     private String telefono;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "empresa_id", nullable = false)
     private Empresa empresa;
 

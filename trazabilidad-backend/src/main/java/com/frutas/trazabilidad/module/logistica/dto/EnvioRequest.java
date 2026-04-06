@@ -68,7 +68,7 @@ public class EnvioRequest {
     private String clienteImportador;
 
     @Size(max = 10, message = "El incoterm no puede exceder 10 caracteres")
-    @Pattern(regexp = "FOB|CIF|EXW|FCA|CPT|CIP|DAP|DPU|DDP",
+    @Pattern(regexp = "^$|^(FOB|CIF|EXW|FCA|CPT|CIP|DAP|DPU|DDP)$",
             message = "Incoterm inválido",
             flags = Pattern.Flag.CASE_INSENSITIVE)
     private String incoterm;

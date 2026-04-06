@@ -2,7 +2,6 @@ package com.frutas.trazabilidad.listener;
 
 import com.frutas.trazabilidad.entity.User;
 import com.frutas.trazabilidad.module.logistica.service.AuditoriaEventoService;
-import com.frutas.trazabilidad.repository.UserRepository;
 import jakarta.persistence.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,18 +18,18 @@ import java.lang.reflect.Field;
  *
  * NOTA: Para evitar ConcurrentModificationException, las entidades de tipo
  * AuditoriaEvento y User se excluyen de la auditoría automática.
+ * NOTA: No hacer queries DB dentro de callbacks JPA (@PostPersist, @PostUpdate)
+ * porque provocan auto-flush que corrompe la sesión de Hibernate.
  */
 @Component
 @Slf4j
 public class AuditEntityListener {
 
     private static AuditoriaEventoService auditoriaService;
-    private static UserRepository userRepository;
 
     @Autowired
-    public void init(@Lazy AuditoriaEventoService auditoriaService, @Lazy UserRepository userRepository) {
+    public void init(@Lazy AuditoriaEventoService auditoriaService) {
         AuditEntityListener.auditoriaService = auditoriaService;
-        AuditEntityListener.userRepository = userRepository;
     }
 
     /**
@@ -146,8 +145,15 @@ public class AuditEntityListener {
                 return null;
             }
 
-            String email = auth.getName();
-            return userRepository.findByEmail(email).orElse(null);
+            // Obtener el User directamente del principal de seguridad.
+            // NO hacer queries (userRepository.findByEmail) dentro de callbacks JPA
+            // porque provocan auto-flush que corrompe la sesión de Hibernate.
+            Object principal = auth.getPrincipal();
+            if (principal instanceof User) {
+                return (User) principal;
+            }
+
+            return null;
         } catch (Exception e) {
             log.warn("No se pudo obtener usuario del contexto de seguridad: {}", e.getMessage());
             return null;

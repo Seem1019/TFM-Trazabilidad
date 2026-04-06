@@ -178,7 +178,7 @@ export function EnvioFormDialog({
       numeroBL: data.numeroBL || undefined,
       observaciones: data.observaciones || undefined,
       clienteImportador: data.clienteImportador || undefined,
-      incoterm: data.incoterm as EnvioRequest['incoterm'],
+      incoterm: (data.incoterm || undefined) as EnvioRequest['incoterm'],
       palletsIds: selectedPallets.length > 0 ? selectedPallets : undefined,
     };
     await onSubmit(cleanData);
